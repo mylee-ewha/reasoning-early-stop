@@ -1,0 +1,9 @@
+name: cot-quant
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+variables:
+  OPENAI_API_KEY: 
+    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
+prefix: /home/miyeon/miniconda3/envs/cot-quant

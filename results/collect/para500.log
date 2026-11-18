@@ -1,0 +1,603 @@
+nohup: ignoring input
+※ sdpa 이므로 attention 계열(head_jsd/attn_ent/attn_sink)은 건너뛴다.
+  hidden·logit 계열은 전부 기록되고, 생성은 기존 sdpa jsonl 과 동일하므로 교차 확인이 가능하다
+500문항  max_new 8192  probe 256토큰마다 40토큰  신호 32토큰마다 (sdpa)
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s]Loading checkpoint shards:  20%|██        | 1/5 [00:00<00:02,  1.58it/s]Loading checkpoint shards:  40%|████      | 2/5 [00:01<00:01,  1.59it/s]Loading checkpoint shards:  60%|██████    | 3/5 [00:01<00:01,  1.50it/s]Loading checkpoint shards:  80%|████████  | 4/5 [00:02<00:00,  1.67it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:02<00:00,  2.09it/s]Loading checkpoint shards: 100%|██████████| 5/5 [00:02<00:00,  1.83it/s]
+probe 팔 4개, 모드 para (문단 300~1200자)
+  [A]  9토큰  '\n</think>\n\nFinal Answer: \\boxed{'
+  [B]  9토큰  '\n</think>\n\nThe answer is \\boxed{'
+  [C] 22토큰  '\n</think>\n\nWait, my reasoning above may be wrong. Let me reconsider. The answer is \\boxed{'
+  [D] 23토큰  '\n</think>\n\nWait, my reasoning above is written out. Let me summarize it. The answer is \\boxed{'
+=== 자체 검증 ===
+  [PASS] T1 </think> 토큰 id        [151668]
+  [PASS] T2 boxed 추출 / 괄호 깊이  8/8
+  [PASS] T3 정규화                  동치 7/7, 구분 3/3
+  [PASS] T4 probe 가 본 생성을 안 건드림 팔 4개 × 발화 2회, 토큰열 완전 동일
+  [PASS] T5 probe 가 답을 읽어냄       8/8 비어있지 않음
+         [A] ['3, \\frac{\\pi}{2}', '(3, \\frac{\\pi}{2})']
+         [B] ['3, \\frac{\\pi}{2}', '3']
+         [C] ['(3, \\frac{\\pi}{2})', '3']
+         [D] ['(3, \\frac{\\pi}{2})', '3']
+  [PASS] T7 문단 경계 검출            4개 / 400토큰 (문단당 100토큰)
+         발화 2회 = 문단 4개를 300자 기준으로 병합한 결과
+  [PASS] T6 내부 신호 기록           12회 × 15종
+         dl_q1, dl_q2, dl_q3, h_cos, h_delta, h_delta_rel, h_norm, layer_agree, layer_ent_drop, layer_ent_mean, layer_kl, margin, tok_ent, top1, top5_mass
+  => 통과
+
+덤프: 레이어 [9, 18, 27, 31, 35, 36] (6개) × hidden 4096, MLP 끔
+  체크포인트당 48KB → 예제당 약 8MB, 500건이면 약 3.9GB
+  파일: sig_para500.jsonl.h.f16 / .prefill.f16 / .meta.jsonl / .dumpinfo.json
+
+/home/miyeon/miniconda3/envs/cot-quant/lib/python3.10/site-packages/sympy/parsing/latex/_parse_latex_antlr.py:23: UserWarning: antlr4.error.ErrorListener module is not installed
+  ErrorListener = import_module('antlr4.error.ErrorListener',
+  1/500 L2 O len 2238 para 65 probe 13 flip 1 commit 0.17 팔일치 0/3 gold거침 1 | 2분 경과, 남은 14.5시간
+  2/500 L5 O len 6859 para 153 probe 31 flip 2 commit 0.11 팔일치 2/3 gold거침 1 | 7분 경과, 남은 27.2시간
+  3/500 L3 O len 2488 para 94 probe 15 flip 5 commit 0.38 팔일치 3/3 gold거침 1 | 8분 경과, 남은 23.1시간
+  4/500 L3 O len 2222 para 56 probe 9 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 10분 경과, 남은 20.4시간
+  5/500 L2 O len 5670 para 91 probe 34 flip 1 commit 0.2 팔일치 0/3 gold거침 1 | 14분 경과, 남은 22.8시간
+  6/500 L2 O len 2861 para 40 probe 18 flip 0 commit 0.06 팔일치 3/3 gold거침 1 | 16분 경과, 남은 21.7시간
+  7/500 L3 O len 4103 para 112 probe 27 flip 1 commit 0.1 팔일치 2/3 gold거침 1 | 19분 경과, 남은 21.9시간
+  8/500 L4 O len 3374 para 64 probe 15 flip 1 commit 0.42 팔일치 2/3 gold거침 1 | 21분 경과, 남은 21.5시간
+  9/500 L3 O len 1730 para 36 probe 7 flip 1 commit 0.32 팔일치 3/3 gold거침 1 | 22분 경과, 남은 20.2시간
+  10/500 L5 X len 8192 para 247 probe 72 flip 9 commit None 팔일치 3/3 gold거침 1 | 28분 경과, 남은 22.8시간
+  11/500 L3 X len 8192 para 264 probe 65 flip 0 commit None 팔일치 3/3 gold거침 1 | 34분 경과, 남은 25.2시간
+  12/500 L5 X len 8192 para 255 probe 37 flip 9 commit None 팔일치 3/3 gold거침 1 | 40분 경과, 남은 27.0시간
+  13/500 L5 O len 3878 para 157 probe 20 flip 5 commit 0.51 팔일치 3/3 gold거침 1 | 42분 경과, 남은 26.5시간
+  14/500 L2 O len 1820 para 42 probe 9 flip 0 commit 0.06 팔일치 3/3 gold거침 1 | 44분 경과, 남은 25.3시간
+  15/500 L1 O len 3290 para 56 probe 17 flip 7 commit None 팔일치 2/3 gold거침 0 | 46분 경과, 남은 24.8시간
+  16/500 L5 O len 4189 para 151 probe 24 flip 6 commit 0.3 팔일치 3/3 gold거침 1 | 49분 경과, 남은 24.8시간
+  17/500 L1 O len 4040 para 118 probe 24 flip 4 commit 0.34 팔일치 0/3 gold거침 1 | 52분 경과, 남은 24.7시간
+  18/500 L4 O len 7855 para 150 probe 57 flip 9 commit None 팔일치 3/3 gold거침 0 | 58분 경과, 남은 25.7시간
+  19/500 L1 X len 8192 para 86 probe 50 flip 0 commit None 팔일치 3/3 gold거침 0 | 63분 경과, 남은 26.7시간
+  20/500 L3 X len 8192 para 187 probe 49 flip 2 commit None 팔일치 3/3 gold거침 1 | 69분 경과, 남은 27.6시간
+  21/500 L3 O len 1892 para 58 probe 12 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 70분 경과, 남은 26.7시간
+  22/500 L3 O len 7302 para 139 probe 33 flip 7 commit 0.32 팔일치 3/3 gold거침 1 | 75분 경과, 남은 27.3시간
+  23/500 L5 O len 2569 para 91 probe 12 flip 3 commit 0.44 팔일치 3/3 gold거침 1 | 77분 경과, 남은 26.7시간
+  24/500 L5 X len 3001 para 110 probe 16 flip 1 commit 0.09 팔일치 2/3 gold거침 0 | 79분 경과, 남은 26.2시간
+  25/500 L5 O len 4033 para 166 probe 19 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 82분 경과, 남은 25.9시간
+  26/500 L5 X len 5079 para 159 probe 29 flip 5 commit 0.55 팔일치 3/3 gold거침 0 | 85분 경과, 남은 26.0시간
+  27/500 L5 X len 8192 para 98 probe 47 flip 3 commit None 팔일치 3/3 gold거침 1 | 91분 경과, 남은 26.6시간
+  28/500 L2 O len 1819 para 45 probe 11 flip 2 commit 0.27 팔일치 2/3 gold거침 1 | 92분 경과, 남은 26.0시간
+  29/500 L2 O len 2270 para 45 probe 15 flip 1 commit 0.27 팔일치 2/3 gold거침 1 | 94분 경과, 남은 25.5시간
+  30/500 L2 O len 1737 para 46 probe 10 flip 3 commit 0.53 팔일치 3/3 gold거침 1 | 95분 경과, 남은 24.9시간
+  31/500 L3 X len 3619 para 147 probe 24 flip 1 commit None 팔일치 1/3 gold거침 1 | 98분 경과, 남은 24.7시간
+  32/500 L4 O len 2325 para 44 probe 10 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 100분 경과, 남은 24.3시간
+  33/500 L4 X len 8192 para 248 probe 78 flip 2 commit None 팔일치 3/3 gold거침 1 | 106분 경과, 남은 24.9시간
+  34/500 L4 O len 3102 para 120 probe 16 flip 7 commit 0.45 팔일치 3/3 gold거침 1 | 108분 경과, 남은 24.7시간
+  35/500 L4 O len 4301 para 88 probe 20 flip 3 commit 0.26 팔일치 3/3 gold거침 1 | 111분 경과, 남은 24.6시간
+  36/500 L2 O len 5102 para 82 probe 24 flip 2 commit 0.11 팔일치 3/3 gold거침 1 | 115분 경과, 남은 24.6시간
+  37/500 L2 X len 5016 para 181 probe 27 flip 3 commit None 팔일치 3/3 gold거침 0 | 118분 경과, 남은 24.6시간
+  38/500 L3 O len 2429 para 48 probe 16 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 120분 경과, 남은 24.2시간
+  39/500 L1 O len 927 para 33 probe 5 flip 0 commit 0.17 팔일치 3/3 gold거침 1 | 120분 경과, 남은 23.7시간
+  40/500 L3 O len 2476 para 83 probe 11 flip 2 commit 0.35 팔일치 3/3 gold거침 1 | 122분 경과, 남은 23.4시간
+  41/500 L2 O len 2277 para 46 probe 14 flip 1 commit 0.12 팔일치 1/3 gold거침 1 | 123분 경과, 남은 23.0시간
+  42/500 L4 X len 8192 para 134 probe 55 flip 1 commit None 팔일치 3/3 gold거침 1 | 129분 경과, 남은 23.5시간
+  43/500 L2 O len 1649 para 71 probe 10 flip 2 commit 0.3 팔일치 3/3 gold거침 1 | 130분 경과, 남은 23.1시간
+  44/500 L5 X len 8192 para 226 probe 56 flip 2 commit None 팔일치 3/3 gold거침 0 | 136분 경과, 남은 23.5시간
+  45/500 L5 O len 1887 para 37 probe 8 flip 1 commit 0.36 팔일치 2/3 gold거침 1 | 137분 경과, 남은 23.2시간
+  46/500 L3 O len 1924 para 54 probe 8 flip 0 commit 0.1 팔일치 3/3 gold거침 1 | 139분 경과, 남은 22.8시간
+  47/500 L2 O len 5881 para 50 probe 26 flip 1 commit 0.41 팔일치 2/3 gold거침 1 | 143분 경과, 남은 22.9시간
+  48/500 L5 O len 2187 para 50 probe 13 flip 2 commit 0.22 팔일치 2/3 gold거침 1 | 144분 경과, 남은 22.6시간
+  49/500 L2 O len 1487 para 47 probe 7 flip 0 commit 0.19 팔일치 3/3 gold거침 1 | 145분 경과, 남은 22.3시간
+  50/500 L4 O len 1564 para 69 probe 9 flip 1 commit 0.19 팔일치 0/3 gold거침 1 | 146분 경과, 남은 22.0시간
+  51/500 L5 O len 5735 para 161 probe 30 flip 8 commit 0.31 팔일치 3/3 gold거침 1 | 150분 경과, 남은 22.1시간
+  52/500 L2 O len 3845 para 105 probe 22 flip 2 commit 0.19 팔일치 0/3 gold거침 1 | 154분 경과, 남은 22.1시간
+  53/500 L5 O len 2047 para 61 probe 12 flip 4 commit 0.42 팔일치 3/3 gold거침 1 | 155분 경과, 남은 21.8시간
+  54/500 L2 O len 1909 para 42 probe 7 flip 0 commit 0.13 팔일치 3/3 gold거침 1 | 157분 경과, 남은 21.6시간
+  55/500 L2 O len 1841 para 57 probe 8 flip 0 commit 0.09 팔일치 3/3 gold거침 1 | 158분 경과, 남은 21.3시간
+  56/500 L4 O len 2076 para 57 probe 10 flip 0 commit 0.09 팔일치 3/3 gold거침 1 | 159분 경과, 남은 21.1시간
+  57/500 L3 O len 1626 para 53 probe 7 flip 0 commit 0.21 팔일치 3/3 gold거침 1 | 161분 경과, 남은 20.8시간
+  58/500 L2 O len 1554 para 31 probe 7 flip 0 commit 0.12 팔일치 3/3 gold거침 1 | 162분 경과, 남은 20.5시간
+  59/500 L1 O len 2353 para 38 probe 11 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 163분 경과, 남은 20.3시간
+  60/500 L2 O len 1751 para 56 probe 9 flip 1 commit 0.18 팔일치 0/3 gold거침 1 | 164분 경과, 남은 20.1시간
+  61/500 L5 X len 8192 para 229 probe 45 flip 7 commit None 팔일치 3/3 gold거침 0 | 170분 경과, 남은 20.4시간
+  62/500 L3 O len 4787 para 110 probe 24 flip 3 commit 0.18 팔일치 0/3 gold거침 1 | 174분 경과, 남은 20.4시간
+  63/500 L5 O len 5013 para 121 probe 27 flip 2 commit 0.26 팔일치 3/3 gold거침 1 | 177분 경과, 남은 20.5시간
+  64/500 L5 O len 5331 para 154 probe 31 flip 2 commit 0.12 팔일치 0/3 gold거침 1 | 181분 경과, 남은 20.5시간
+  65/500 L4 O len 7530 para 213 probe 40 flip 9 commit None 팔일치 0/3 gold거침 1 | 186분 경과, 남은 20.8시간
+  66/500 L1 O len 1255 para 35 probe 7 flip 0 commit 0.16 팔일치 3/3 gold거침 1 | 187분 경과, 남은 20.5시간
+  67/500 L3 O len 1929 para 69 probe 10 flip 7 commit 0.93 팔일치 0/3 gold거침 1 | 189분 경과, 남은 20.3시간
+  68/500 L4 O len 4592 para 58 probe 28 flip 4 commit 0.14 팔일치 3/3 gold거침 1 | 192분 경과, 남은 20.3시간
+  69/500 L4 O len 3283 para 87 probe 18 flip 4 commit 0.25 팔일치 3/3 gold거침 1 | 194분 경과, 남은 20.2시간
+  70/500 L4 O len 8192 para 60 probe 33 flip 0 commit 0.02 팔일치 1/3 gold거침 1 | 200분 경과, 남은 20.4시간
+  71/500 L2 X len 2369 para 53 probe 12 flip 0 commit None 팔일치 3/3 gold거침 1 | 201분 경과, 남은 20.3시간
+  72/500 L4 X len 6867 para 343 probe 44 flip 4 commit 0.4 팔일치 1/3 gold거침 0 | 206분 경과, 남은 20.4시간
+  73/500 L2 O len 1686 para 70 probe 9 flip 0 commit 0.1 팔일치 3/3 gold거침 1 | 207분 경과, 남은 20.2시간
+  74/500 L4 O len 1704 para 38 probe 9 flip 2 commit 0.25 팔일치 1/3 gold거침 1 | 209분 경과, 남은 20.0시간
+  75/500 L2 O len 2837 para 117 probe 19 flip 11 commit None 팔일치 2/3 gold거침 1 | 211분 경과, 남은 19.9시간
+  76/500 L4 O len 3057 para 77 probe 19 flip 3 commit 0.25 팔일치 3/3 gold거침 1 | 213분 경과, 남은 19.8시간
+  77/500 L2 O len 4049 para 103 probe 33 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 216분 경과, 남은 19.8시간
+  78/500 L1 O len 1712 para 46 probe 10 flip 0 commit 0.13 팔일치 3/3 gold거침 1 | 217분 경과, 남은 19.6시간
+  79/500 L4 O len 2406 para 84 probe 10 flip 3 commit 0.68 팔일치 3/3 gold거침 1 | 219분 경과, 남은 19.4시간
+  80/500 L1 O len 1507 para 53 probe 9 flip 0 commit 0.11 팔일치 3/3 gold거침 1 | 220분 경과, 남은 19.2시간
+  81/500 L5 X len 8192 para 284 probe 72 flip 13 commit None 팔일치 3/3 gold거침 1 | 226분 경과, 남은 19.5시간
+  82/500 L3 O len 1917 para 91 probe 13 flip 3 commit 0.38 팔일치 3/3 gold거침 1 | 227분 경과, 남은 19.3시간
+  83/500 L5 X len 8192 para 219 probe 62 flip 3 commit None 팔일치 3/3 gold거침 1 | 233분 경과, 남은 19.5시간
+  84/500 L2 O len 5289 para 115 probe 25 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 236분 경과, 남은 19.5시간
+  85/500 L4 O len 4197 para 149 probe 25 flip 4 commit 0.42 팔일치 0/3 gold거침 1 | 239분 경과, 남은 19.5시간
+  86/500 L4 O len 1742 para 60 probe 9 flip 1 commit 0.44 팔일치 1/3 gold거침 1 | 240분 경과, 남은 19.3시간
+  87/500 L1 O len 1499 para 35 probe 9 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 242분 경과, 남은 19.1시간
+  88/500 L1 O len 2698 para 115 probe 18 flip 1 commit 0.21 팔일치 3/3 gold거침 1 | 243분 경과, 남은 19.0시간
+  89/500 L5 X len 8192 para 127 probe 41 flip 6 commit None 팔일치 3/3 gold거침 1 | 249분 경과, 남은 19.2시간
+  90/500 L4 O len 4260 para 65 probe 18 flip 2 commit 0.28 팔일치 3/3 gold거침 1 | 252분 경과, 남은 19.1시간
+  91/500 L3 O len 1833 para 63 probe 12 flip 0 commit 0.09 팔일치 2/3 gold거침 1 | 253분 경과, 남은 19.0시간
+  92/500 L3 O len 3722 para 116 probe 30 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 256분 경과, 남은 18.9시간
+  93/500 L4 O len 5220 para 83 probe 24 flip 6 commit 0.56 팔일치 1/3 gold거침 1 | 260분 경과, 남은 18.9시간
+  94/500 L4 O len 2767 para 125 probe 14 flip 4 commit 0.36 팔일치 3/3 gold거침 1 | 261분 경과, 남은 18.8시간
+  95/500 L5 X len 8192 para 120 probe 48 flip 1 commit None 팔일치 3/3 gold거침 1 | 267분 경과, 남은 19.0시간
+  96/500 L2 O len 1646 para 61 probe 6 flip 3 commit 0.89 팔일치 0/3 gold거침 1 | 268분 경과, 남은 18.8시간
+  97/500 L5 X len 6859 para 185 probe 31 flip 4 commit 0.91 팔일치 0/3 gold거침 0 | 273분 경과, 남은 18.9시간
+  98/500 L1 O len 3810 para 81 probe 25 flip 2 commit 0.12 팔일치 3/3 gold거침 1 | 276분 경과, 남은 18.8시간
+  99/500 L2 O len 2143 para 75 probe 16 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 277분 경과, 남은 18.7시간
+  100/500 L3 X len 6304 para 168 probe 32 flip 4 commit 0.2 팔일치 1/3 gold거침 0 | 284분 경과, 남은 18.9시간
+  101/500 L5 X len 8192 para 199 probe 56 flip 9 commit None 팔일치 3/3 gold거침 0 | 290분 경과, 남은 19.1시간
+  102/500 L5 X len 8192 para 167 probe 49 flip 5 commit None 팔일치 3/3 gold거침 1 | 295분 경과, 남은 19.2시간
+  103/500 L1 O len 1988 para 73 probe 12 flip 2 commit None 팔일치 1/3 gold거침 1 | 297분 경과, 남은 19.1시간
+  104/500 L5 X len 8192 para 355 probe 62 flip 16 commit None 팔일치 3/3 gold거침 0 | 303분 경과, 남은 19.2시간
+  105/500 L4 O len 7495 para 262 probe 36 flip 10 commit 0.85 팔일치 1/3 gold거침 1 | 308분 경과, 남은 19.3시간
+  106/500 L3 O len 2110 para 137 probe 13 flip 2 commit 0.27 팔일치 3/3 gold거침 1 | 309분 경과, 남은 19.2시간
+  107/500 L2 O len 2992 para 59 probe 18 flip 3 commit None 팔일치 1/3 gold거침 1 | 312분 경과, 남은 19.1시간
+  108/500 L2 O len 2641 para 59 probe 16 flip 1 commit 0.22 팔일치 3/3 gold거침 1 | 313분 경과, 남은 19.0시간
+  109/500 L3 X len 8192 para 101 probe 42 flip 0 commit None 팔일치 3/3 gold거침 1 | 319분 경과, 남은 19.1시간
+  110/500 L5 O len 5068 para 135 probe 23 flip 2 commit 0.38 팔일치 3/3 gold거침 1 | 322분 경과, 남은 19.1시간
+  111/500 L4 X len 8192 para 208 probe 49 flip 16 commit None 팔일치 3/3 gold거침 0 | 328분 경과, 남은 19.2시간
+  112/500 L3 O len 2458 para 63 probe 15 flip 5 commit 0.53 팔일치 3/3 gold거침 1 | 330분 경과, 남은 19.1시간
+  113/500 L4 O len 5736 para 176 probe 37 flip 1 commit 0.17 팔일치 3/3 gold거침 1 | 334분 경과, 남은 19.1시간
+  114/500 L2 O len 3215 para 73 probe 17 flip 1 commit 0.12 팔일치 3/3 gold거침 1 | 336분 경과, 남은 19.0시간
+  115/500 L3 X len 8192 para 76 probe 7 flip 2 commit None 팔일치 3/3 gold거침 1 | 342분 경과, 남은 19.1시간
+  116/500 L2 O len 3065 para 106 probe 20 flip 1 commit 0.15 팔일치 0/3 gold거침 1 | 344분 경과, 남은 19.0시간
+  117/500 L2 O len 1600 para 55 probe 9 flip 0 commit 0.08 팔일치 3/3 gold거침 1 | 345분 경과, 남은 18.8시간
+  118/500 L2 O len 1693 para 50 probe 9 flip 0 commit 0.12 팔일치 3/3 gold거침 1 | 346분 경과, 남은 18.7시간
+  119/500 L5 X len 8192 para 259 probe 48 flip 5 commit None 팔일치 3/3 gold거침 1 | 352분 경과, 남은 18.8시간
+  120/500 L3 X len 8192 para 242 probe 67 flip 4 commit None 팔일치 3/3 gold거침 1 | 357분 경과, 남은 18.9시간
+  121/500 L2 X len 8192 para 260 probe 63 flip 3 commit None 팔일치 3/3 gold거침 1 | 363분 경과, 남은 19.0시간
+  122/500 L2 O len 1282 para 64 probe 9 flip 0 commit 0.08 팔일치 3/3 gold거침 1 | 364분 경과, 남은 18.8시간
+  123/500 L3 O len 1624 para 44 probe 7 flip 0 commit 0.1 팔일치 3/3 gold거침 1 | 365분 경과, 남은 18.6시간
+  124/500 L4 X len 8192 para 217 probe 60 flip 1 commit None 팔일치 3/3 gold거침 1 | 370분 경과, 남은 18.7시간
+  125/500 L4 O len 3327 para 136 probe 17 flip 6 commit 0.43 팔일치 3/3 gold거침 1 | 373분 경과, 남은 18.6시간
+  126/500 L4 O len 3543 para 61 probe 17 flip 2 commit 0.19 팔일치 3/3 gold거침 1 | 375분 경과, 남은 18.6시간
+  127/500 L4 X len 8192 para 255 probe 59 flip 18 commit None 팔일치 3/3 gold거침 0 | 382분 경과, 남은 18.7시간
+  128/500 L3 X len 3626 para 100 probe 22 flip 2 commit 0.17 팔일치 2/3 gold거침 0 | 385분 경과, 남은 18.6시간
+  129/500 L3 X len 8192 para 79 probe 45 flip 12 commit None 팔일치 3/3 gold거침 1 | 390분 경과, 남은 18.7시간
+  130/500 L5 X len 8192 para 127 probe 45 flip 7 commit None 팔일치 3/3 gold거침 1 | 396분 경과, 남은 18.8시간
+  131/500 L4 O len 6291 para 116 probe 29 flip 5 commit 0.35 팔일치 2/3 gold거침 1 | 401분 경과, 남은 18.8시간
+  132/500 L4 O len 3296 para 136 probe 19 flip 1 commit 0.33 팔일치 3/3 gold거침 1 | 403분 경과, 남은 18.7시간
+  133/500 L3 O len 3002 para 103 probe 18 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 405분 경과, 남은 18.6시간
+  134/500 L3 O len 2973 para 87 probe 19 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 407분 경과, 남은 18.5시간
+  135/500 L4 O len 2557 para 43 probe 11 flip 5 commit 0.68 팔일치 3/3 gold거침 1 | 409분 경과, 남은 18.4시간
+  136/500 L5 O len 2489 para 57 probe 12 flip 0 commit 0.06 팔일치 3/3 gold거침 1 | 410분 경과, 남은 18.3시간
+  137/500 L5 X len 8192 para 266 probe 54 flip 1 commit None 팔일치 3/3 gold거침 1 | 416분 경과, 남은 18.4시간
+  138/500 L4 O len 3910 para 97 probe 23 flip 2 commit 0.17 팔일치 2/3 gold거침 1 | 419분 경과, 남은 18.3시간
+  139/500 L4 X len 8192 para 12 probe 27 flip 2 commit None 팔일치 3/3 gold거침 0 | 425분 경과, 남은 18.4시간
+  140/500 L3 X len 8192 para 99 probe 36 flip 0 commit None 팔일치 3/3 gold거침 1 | 430분 경과, 남은 18.4시간
+  141/500 L4 O len 2442 para 73 probe 11 flip 0 commit 0.07 팔일치 0/3 gold거침 1 | 432분 경과, 남은 18.3시간
+  142/500 L1 O len 5539 para 61 probe 33 flip 0 commit 0.02 팔일치 3/3 gold거침 1 | 435분 경과, 남은 18.3시간
+  143/500 L5 X len 8192 para 93 probe 57 flip 3 commit None 팔일치 3/3 gold거침 1 | 442분 경과, 남은 18.4시간
+  144/500 L3 O len 2984 para 66 probe 15 flip 4 commit 0.48 팔일치 3/3 gold거침 1 | 444분 경과, 남은 18.3시간
+  145/500 L1 O len 1918 para 71 probe 14 flip 1 commit None 팔일치 3/3 gold거침 0 | 446분 경과, 남은 18.2시간
+  146/500 L5 O len 8192 para 138 probe 42 flip 3 commit 0.56 팔일치 0/3 gold거침 1 | 451분 경과, 남은 18.2시간
+  147/500 L3 O len 2110 para 62 probe 13 flip 2 commit 0.24 팔일치 1/3 gold거침 1 | 453분 경과, 남은 18.1시간
+  148/500 L5 X len 8192 para 237 probe 57 flip 4 commit None 팔일치 3/3 gold거침 1 | 459분 경과, 남은 18.2시간
+  149/500 L1 O len 1605 para 54 probe 10 flip 1 commit 0.22 팔일치 3/3 gold거침 1 | 460분 경과, 남은 18.1시간
+  150/500 L2 O len 3617 para 152 probe 17 flip 2 commit 0.2 팔일치 2/3 gold거침 1 | 462분 경과, 남은 18.0시간
+  151/500 L5 O len 7332 para 95 probe 22 flip 3 commit 0.24 팔일치 3/3 gold거침 1 | 467분 경과, 남은 18.0시간
+  152/500 L5 O len 4444 para 115 probe 27 flip 4 commit 0.24 팔일치 3/3 gold거침 1 | 470분 경과, 남은 17.9시간
+  153/500 L5 X len 8192 para 125 probe 40 flip 3 commit None 팔일치 3/3 gold거침 1 | 476분 경과, 남은 18.0시간
+  154/500 L4 X len 8192 para 116 probe 49 flip 16 commit None 팔일치 3/3 gold거침 1 | 481분 경과, 남은 18.0시간
+  155/500 L5 X len 8192 para 62 probe 42 flip 2 commit None 팔일치 3/3 gold거침 0 | 487분 경과, 남은 18.1시간
+  156/500 L4 O len 3914 para 45 probe 17 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 489분 경과, 남은 18.0시간
+  157/500 L3 O len 7746 para 227 probe 43 flip 1 commit 0.48 팔일치 3/3 gold거침 1 | 495분 경과, 남은 18.0시간
+  158/500 L2 O len 4088 para 127 probe 27 flip 3 commit 0.24 팔일치 3/3 gold거침 1 | 498분 경과, 남은 18.0시간
+  159/500 L4 O len 3493 para 109 probe 20 flip 3 commit 0.42 팔일치 3/3 gold거침 1 | 500분 경과, 남은 17.9시간
+  160/500 L4 O len 3517 para 90 probe 19 flip 4 commit 0.36 팔일치 3/3 gold거침 1 | 503분 경과, 남은 17.8시간
+  161/500 L2 O len 1969 para 88 probe 11 flip 0 commit 0.06 팔일치 3/3 gold거침 1 | 504분 경과, 남은 17.7시간
+  162/500 L2 O len 1747 para 44 probe 8 flip 0 commit 0.17 팔일치 3/3 gold거침 1 | 505분 경과, 남은 17.6시간
+  163/500 L5 O len 5419 para 80 probe 28 flip 3 commit 0.15 팔일치 3/3 gold거침 1 | 509분 경과, 남은 17.5시간
+  164/500 L5 X len 8192 para 110 probe 47 flip 5 commit None 팔일치 3/3 gold거침 1 | 515분 경과, 남은 17.6시간
+  165/500 L2 O len 5654 para 197 probe 31 flip 14 commit 0.49 팔일치 0/3 gold거침 1 | 520분 경과, 남은 17.6시간
+  166/500 L4 O len 2366 para 67 probe 16 flip 2 commit 0.22 팔일치 2/3 gold거침 1 | 521분 경과, 남은 17.5시간
+  167/500 L5 X len 8192 para 46 probe 29 flip 19 commit None 팔일치 3/3 gold거침 0 | 527분 경과, 남은 17.5시간
+  168/500 L1 O len 1183 para 29 probe 5 flip 0 commit 0.14 팔일치 3/3 gold거침 1 | 528분 경과, 남은 17.4시간
+  169/500 L5 X len 8192 para 107 probe 48 flip 11 commit None 팔일치 3/3 gold거침 1 | 534분 경과, 남은 17.4시간
+  170/500 L2 O len 2574 para 66 probe 10 flip 0 commit 0.06 팔일치 3/3 gold거침 1 | 535분 경과, 남은 17.3시간
+  171/500 L5 X len 8192 para 253 probe 55 flip 14 commit None 팔일치 3/3 gold거침 1 | 541분 경과, 남은 17.4시간
+  172/500 L1 O len 1361 para 31 probe 6 flip 2 commit 0.51 팔일치 3/3 gold거침 1 | 542분 경과, 남은 17.2시간
+  173/500 L1 O len 1843 para 63 probe 9 flip 2 commit 0.49 팔일치 2/3 gold거침 1 | 544분 경과, 남은 17.1시간
+  174/500 L5 X len 8192 para 283 probe 53 flip 4 commit None 팔일치 3/3 gold거침 1 | 549분 경과, 남은 17.2시간
+  175/500 L3 O len 2755 para 112 probe 17 flip 0 commit 0.06 팔일치 2/3 gold거침 1 | 551분 경과, 남은 17.1시간
+  176/500 L2 O len 4783 para 140 probe 23 flip 3 commit 0.22 팔일치 3/3 gold거침 1 | 554분 경과, 남은 17.0시간
+  177/500 L3 O len 4620 para 131 probe 25 flip 4 commit 0.38 팔일치 2/3 gold거침 1 | 558분 경과, 남은 17.0시간
+  178/500 L3 O len 5116 para 117 probe 21 flip 2 commit 0.2 팔일치 2/3 gold거침 1 | 562분 경과, 남은 16.9시간
+  179/500 L2 O len 2930 para 73 probe 14 flip 2 commit 0.25 팔일치 3/3 gold거침 1 | 564분 경과, 남은 16.8시간
+  180/500 L4 O len 5163 para 140 probe 27 flip 7 commit 0.39 팔일치 3/3 gold거침 1 | 568분 경과, 남은 16.8시간
+  181/500 L3 O len 3350 para 139 probe 21 flip 2 commit 0.27 팔일치 3/3 gold거침 1 | 570분 경과, 남은 16.8시간
+  182/500 L3 O len 3915 para 102 probe 24 flip 2 commit 0.29 팔일치 1/3 gold거침 1 | 574분 경과, 남은 16.7시간
+  183/500 L2 O len 2040 para 54 probe 11 flip 0 commit 0.09 팔일치 3/3 gold거침 1 | 575분 경과, 남은 16.6시간
+  184/500 L4 O len 4977 para 90 probe 26 flip 2 commit 0.21 팔일치 2/3 gold거침 1 | 579분 경과, 남은 16.6시간
+  185/500 L5 X len 8192 para 167 probe 54 flip 4 commit None 팔일치 3/3 gold거침 1 | 584분 경과, 남은 16.6시간
+  186/500 L1 O len 1654 para 73 probe 10 flip 0 commit 0.12 팔일치 3/3 gold거침 1 | 585분 경과, 남은 16.5시간
+  187/500 L4 O len 4480 para 98 probe 30 flip 3 commit 0.18 팔일치 3/3 gold거침 1 | 589분 경과, 남은 16.4시간
+  188/500 L1 O len 2076 para 83 probe 12 flip 1 commit 0.29 팔일치 3/3 gold거침 1 | 590분 경과, 남은 16.3시간
+  189/500 L5 O len 4256 para 77 probe 16 flip 5 commit 0.31 팔일치 3/3 gold거침 1 | 593분 경과, 남은 16.3시간
+  190/500 L5 O len 7370 para 172 probe 37 flip 10 commit 0.61 팔일치 3/3 gold거침 1 | 598분 경과, 남은 16.3시간
+  191/500 L5 O len 3046 para 62 probe 18 flip 5 commit 0.38 팔일치 3/3 gold거침 1 | 600분 경과, 남은 16.2시간
+  192/500 L2 O len 1386 para 62 probe 7 flip 0 commit 0.16 팔일치 3/3 gold거침 1 | 601분 경과, 남은 16.1시간
+  193/500 L3 O len 2758 para 84 probe 15 flip 3 commit 0.35 팔일치 3/3 gold거침 1 | 603분 경과, 남은 16.0시간
+  194/500 L3 O len 7401 para 172 probe 38 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 608분 경과, 남은 16.0시간
+  195/500 L5 O len 7873 para 172 probe 42 flip 3 commit 0.25 팔일치 1/3 gold거침 1 | 614분 경과, 남은 16.0시간
+  196/500 L4 O len 3560 para 76 probe 16 flip 3 commit 0.19 팔일치 3/3 gold거침 1 | 616분 경과, 남은 15.9시간
+  197/500 L1 O len 2149 para 67 probe 11 flip 3 commit 0.48 팔일치 3/3 gold거침 1 | 618분 경과, 남은 15.8시간
+  198/500 L5 O len 7253 para 128 probe 30 flip 5 commit 0.24 팔일치 3/3 gold거침 1 | 623분 경과, 남은 15.8시간
+  199/500 L3 O len 2417 para 76 probe 16 flip 1 commit 0.12 팔일치 1/3 gold거침 1 | 624분 경과, 남은 15.7시간
+  200/500 L2 O len 1434 para 62 probe 7 flip 2 commit 0.36 팔일치 3/3 gold거침 1 | 625분 경과, 남은 15.6시간
+  201/500 L4 O len 3108 para 85 probe 17 flip 1 commit 0.09 팔일치 0/3 gold거침 1 | 628분 경과, 남은 15.6시간
+  202/500 L4 O len 4647 para 110 probe 25 flip 4 commit 0.2 팔일치 3/3 gold거침 1 | 631분 경과, 남은 15.5시간
+  203/500 L5 O len 4333 para 108 probe 29 flip 0 commit 0.02 팔일치 3/3 gold거침 1 | 634분 경과, 남은 15.5시간
+  204/500 L3 O len 3611 para 59 probe 12 flip 3 commit 0.27 팔일치 1/3 gold거침 1 | 636분 경과, 남은 15.4시간
+  205/500 L5 X len 8192 para 147 probe 49 flip 2 commit None 팔일치 3/3 gold거침 0 | 642분 경과, 남은 15.4시간
+  206/500 L3 O len 4159 para 133 probe 22 flip 6 commit 0.35 팔일치 1/3 gold거침 1 | 646분 경과, 남은 15.4시간
+  207/500 L2 O len 2250 para 81 probe 12 flip 3 commit 0.34 팔일치 3/3 gold거침 1 | 648분 경과, 남은 15.3시간
+  208/500 L2 O len 1421 para 39 probe 6 flip 0 commit 0.13 팔일치 3/3 gold거침 1 | 649분 경과, 남은 15.2시간
+  209/500 L3 O len 3190 para 59 probe 17 flip 1 commit 0.15 팔일치 2/3 gold거침 1 | 651분 경과, 남은 15.1시간
+  210/500 L2 O len 4474 para 103 probe 22 flip 2 commit 0.36 팔일치 3/3 gold거침 1 | 654분 경과, 남은 15.0시간
+  211/500 L4 X len 8192 para 63 probe 41 flip 2 commit None 팔일치 3/3 gold거침 1 | 659분 경과, 남은 15.0시간
+  212/500 L2 O len 2380 para 65 probe 12 flip 2 commit 0.24 팔일치 2/3 gold거침 1 | 661분 경과, 남은 15.0시간
+  213/500 L3 O len 1932 para 50 probe 9 flip 3 commit 0.35 팔일치 3/3 gold거침 1 | 662분 경과, 남은 14.9시간
+  214/500 L4 O len 5786 para 141 probe 33 flip 8 commit 0.68 팔일치 3/3 gold거침 1 | 666분 경과, 남은 14.8시간
+  215/500 L5 X len 8192 para 268 probe 68 flip 6 commit None 팔일치 3/3 gold거침 1 | 672분 경과, 남은 14.8시간
+  216/500 L4 O len 2889 para 111 probe 17 flip 1 commit 0.11 팔일치 1/3 gold거침 1 | 674분 경과, 남은 14.8시간
+  217/500 L4 O len 2306 para 76 probe 15 flip 3 commit 0.26 팔일치 2/3 gold거침 1 | 676분 경과, 남은 14.7시간
+  218/500 L4 X len 8192 para 184 probe 63 flip 1 commit None 팔일치 3/3 gold거침 0 | 683분 경과, 남은 14.7시간
+  219/500 L2 O len 1263 para 32 probe 7 flip 2 commit 0.47 팔일치 0/3 gold거침 1 | 684분 경과, 남은 14.6시간
+  220/500 L4 X len 8192 para 190 probe 44 flip 16 commit None 팔일치 3/3 gold거침 1 | 690분 경과, 남은 14.6시간
+  221/500 L5 O len 4132 para 62 probe 21 flip 2 commit 0.22 팔일치 2/3 gold거침 1 | 693분 경과, 남은 14.6시간
+  222/500 L3 O len 7010 para 230 probe 43 flip 3 commit 0.15 팔일치 3/3 gold거침 1 | 697분 경과, 남은 14.6시간
+  223/500 L4 X len 8192 para 113 probe 49 flip 13 commit None 팔일치 3/3 gold거침 1 | 703분 경과, 남은 14.6시간
+  224/500 L3 X len 8192 para 264 probe 46 flip 12 commit None 팔일치 3/3 gold거침 1 | 709분 경과, 남은 14.6시간
+  225/500 L4 O len 6405 para 123 probe 34 flip 5 commit 0.3 팔일치 3/3 gold거침 1 | 714분 경과, 남은 14.5시간
+  226/500 L3 O len 2288 para 101 probe 13 flip 2 commit 0.2 팔일치 0/3 gold거침 1 | 716분 경과, 남은 14.5시간
+  227/500 L3 O len 3216 para 80 probe 22 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 718분 경과, 남은 14.4시간
+  228/500 L3 X len 1557 para 40 probe 10 flip 0 commit 0.09 팔일치 3/3 gold거침 0 | 719분 경과, 남은 14.3시간
+  229/500 L4 O len 8150 para 180 probe 54 flip 14 commit 0.93 팔일치 2/3 gold거침 1 | 725분 경과, 남은 14.3시간
+  230/500 L4 O len 1901 para 44 probe 12 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 727분 경과, 남은 14.2시간
+  231/500 L4 O len 3847 para 141 probe 19 flip 1 commit 0.31 팔일치 2/3 gold거침 1 | 729분 경과, 남은 14.2시간
+  232/500 L4 O len 3407 para 142 probe 20 flip 1 commit 0.42 팔일치 3/3 gold거침 1 | 732분 경과, 남은 14.1시간
+  233/500 L5 O len 6323 para 59 probe 21 flip 3 commit 0.56 팔일치 1/3 gold거침 1 | 736분 경과, 남은 14.1시간
+  234/500 L2 O len 8027 para 176 probe 60 flip 1 commit 0.04 팔일치 1/3 gold거침 1 | 742분 경과, 남은 14.1시간
+  235/500 L3 O len 3334 para 98 probe 14 flip 1 commit 0.2 팔일치 3/3 gold거침 1 | 744분 경과, 남은 14.0시간
+  236/500 L4 O len 3016 para 88 probe 20 flip 1 commit 0.19 팔일치 0/3 gold거침 1 | 746분 경과, 남은 13.9시간
+  237/500 L4 X len 8192 para 236 probe 51 flip 4 commit None 팔일치 3/3 gold거침 1 | 752분 경과, 남은 13.9시간
+  238/500 L1 O len 2520 para 58 probe 10 flip 1 commit 0.3 팔일치 3/3 gold거침 1 | 754분 경과, 남은 13.8시간
+  239/500 L5 O len 2898 para 54 probe 8 flip 2 commit 0.42 팔일치 3/3 gold거침 1 | 756분 경과, 남은 13.8시간
+  240/500 L5 X len 8192 para 82 probe 40 flip 10 commit None 팔일치 3/3 gold거침 1 | 761분 경과, 남은 13.7시간
+  241/500 L4 X len 8192 para 303 probe 72 flip 1 commit None 팔일치 3/3 gold거침 1 | 767분 경과, 남은 13.7시간
+  242/500 L5 O len 3732 para 101 probe 18 flip 3 commit 0.49 팔일치 3/3 gold거침 1 | 770분 경과, 남은 13.7시간
+  243/500 L5 X len 8192 para 197 probe 46 flip 17 commit None 팔일치 3/3 gold거침 1 | 776분 경과, 남은 13.7시간
+  244/500 L2 O len 1715 para 61 probe 11 flip 0 commit 0.09 팔일치 0/3 gold거침 1 | 777분 경과, 남은 13.6시간
+  245/500 L5 O len 3729 para 125 probe 21 flip 1 commit 0.21 팔일치 1/3 gold거침 1 | 779분 경과, 남은 13.5시간
+  246/500 L4 O len 5824 para 231 probe 31 flip 7 commit None 팔일치 3/3 gold거침 1 | 784분 경과, 남은 13.5시간
+  247/500 L2 O len 1507 para 37 probe 9 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 785분 경과, 남은 13.4시간
+  248/500 L3 O len 3194 para 43 probe 11 flip 1 commit 0.39 팔일치 3/3 gold거침 1 | 787분 경과, 남은 13.3시간
+  249/500 L4 O len 5719 para 138 probe 31 flip 6 commit 0.57 팔일치 1/3 gold거침 1 | 792분 경과, 남은 13.3시간
+  250/500 L4 O len 4370 para 115 probe 20 flip 5 commit 0.34 팔일치 3/3 gold거침 1 | 794분 경과, 남은 13.2시간
+  251/500 L4 O len 1716 para 50 probe 9 flip 2 commit 0.54 팔일치 3/3 gold거침 1 | 796분 경과, 남은 13.2시간
+  252/500 L5 O len 8025 para 288 probe 63 flip 7 commit 0.2 팔일치 3/3 gold거침 1 | 802분 경과, 남은 13.1시간
+  253/500 L5 O len 3250 para 139 probe 19 flip 4 commit 0.21 팔일치 1/3 gold거침 1 | 804분 경과, 남은 13.1시간
+  254/500 L3 O len 1529 para 53 probe 10 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 805분 경과, 남은 13.0시간
+  255/500 L5 O len 2197 para 57 probe 12 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 806분 경과, 남은 12.9시간
+  256/500 L2 X len 2549 para 47 probe 13 flip 0 commit 0.08 팔일치 3/3 gold거침 0 | 808분 경과, 남은 12.8시간
+  257/500 L3 O len 2159 para 83 probe 14 flip 2 commit 0.3 팔일치 1/3 gold거침 1 | 810분 경과, 남은 12.8시간
+  258/500 L4 X len 1939 para 53 probe 12 flip 2 commit 0.18 팔일치 3/3 gold거침 0 | 811분 경과, 남은 12.7시간
+  259/500 L3 O len 2029 para 97 probe 11 flip 1 commit 0.25 팔일치 3/3 gold거침 1 | 812분 경과, 남은 12.6시간
+  260/500 L1 O len 1843 para 44 probe 9 flip 0 commit 0.12 팔일치 3/3 gold거침 1 | 814분 경과, 남은 12.5시간
+  261/500 L3 O len 3635 para 109 probe 21 flip 2 commit 0.3 팔일치 3/3 gold거침 1 | 816분 경과, 남은 12.5시간
+  262/500 L3 O len 4451 para 100 probe 25 flip 1 commit 0.07 팔일치 3/3 gold거침 1 | 819분 경과, 남은 12.4시간
+  263/500 L1 O len 1325 para 61 probe 8 flip 0 commit 0.09 팔일치 3/3 gold거침 1 | 820분 경과, 남은 12.3시간
+  264/500 L4 O len 1914 para 65 probe 10 flip 1 commit 0.27 팔일치 2/3 gold거침 1 | 822분 경과, 남은 12.2시간
+  265/500 L5 X len 8192 para 212 probe 66 flip 19 commit None 팔일치 3/3 gold거침 0 | 828분 경과, 남은 12.2시간
+  266/500 L2 O len 3641 para 82 probe 22 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 831분 경과, 남은 12.2시간
+  267/500 L3 O len 3730 para 76 probe 21 flip 1 commit 0.08 팔일치 0/3 gold거침 1 | 833분 경과, 남은 12.1시간
+  268/500 L1 O len 5387 para 66 probe 25 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 837분 경과, 남은 12.1시간
+  269/500 L1 O len 2214 para 85 probe 9 flip 1 commit 0.17 팔일치 3/3 gold거침 1 | 839분 경과, 남은 12.0시간
+  270/500 L3 O len 2058 para 59 probe 14 flip 0 commit 0.09 팔일치 3/3 gold거침 1 | 840분 경과, 남은 11.9시간
+  271/500 L1 O len 2081 para 63 probe 14 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 841분 경과, 남은 11.9시간
+  272/500 L4 O len 6258 para 242 probe 34 flip 4 commit 0.26 팔일치 2/3 gold거침 1 | 846분 경과, 남은 11.8시간
+  273/500 L4 O len 5023 para 134 probe 28 flip 7 commit 0.31 팔일치 1/3 gold거침 1 | 850분 경과, 남은 11.8시간
+  274/500 L4 O len 2445 para 93 probe 13 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 851분 경과, 남은 11.7시간
+  275/500 L5 X len 8192 para 28 probe 32 flip 1 commit None 팔일치 3/3 gold거침 1 | 857분 경과, 남은 11.7시간
+  276/500 L2 O len 2134 para 47 probe 12 flip 1 commit 0.12 팔일치 1/3 gold거침 1 | 859분 경과, 남은 11.6시간
+  277/500 L5 O len 6724 para 105 probe 34 flip 1 commit 0.06 팔일치 0/3 gold거침 1 | 863분 경과, 남은 11.6시간
+  278/500 L4 O len 1677 para 33 probe 8 flip 2 commit 0.84 팔일치 0/3 gold거침 1 | 865분 경과, 남은 11.5시간
+  279/500 L3 O len 2199 para 73 probe 10 flip 0 commit 0.11 팔일치 3/3 gold거침 1 | 866분 경과, 남은 11.4시간
+  280/500 L5 O len 4423 para 116 probe 27 flip 4 commit 0.33 팔일치 3/3 gold거침 1 | 869분 경과, 남은 11.4시간
+  281/500 L4 O len 2022 para 69 probe 13 flip 2 commit 0.28 팔일치 3/3 gold거침 1 | 871분 경과, 남은 11.3시간
+  282/500 L4 X len 8192 para 246 probe 76 flip 0 commit None 팔일치 3/3 gold거침 1 | 876분 경과, 남은 11.3시간
+  283/500 L4 O len 4361 para 127 probe 24 flip 2 commit 0.09 팔일치 3/3 gold거침 1 | 879분 경과, 남은 11.2시간
+  284/500 L3 O len 1720 para 47 probe 8 flip 0 commit 0.12 팔일치 3/3 gold거침 1 | 881분 경과, 남은 11.2시간
+  285/500 L5 X len 8192 para 71 probe 32 flip 4 commit None 팔일치 3/3 gold거침 0 | 887분 경과, 남은 11.1시간
+  286/500 L4 X len 8192 para 52 probe 23 flip 8 commit None 팔일치 3/3 gold거침 0 | 892분 경과, 남은 11.1시간
+  287/500 L5 X len 8192 para 155 probe 59 flip 2 commit None 팔일치 3/3 gold거침 0 | 898분 경과, 남은 11.1시간
+  288/500 L5 O len 6880 para 70 probe 31 flip 5 commit 0.26 팔일치 3/3 gold거침 1 | 902분 경과, 남은 11.1시간
+  289/500 L5 O len 6779 para 171 probe 38 flip 5 commit 0.42 팔일치 1/3 gold거침 1 | 907분 경과, 남은 11.0시간
+  290/500 L3 O len 4728 para 113 probe 25 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 910분 경과, 남은 11.0시간
+  291/500 L3 O len 4035 para 147 probe 20 flip 2 commit 0.27 팔일치 1/3 gold거침 1 | 913분 경과, 남은 10.9시간
+  292/500 L4 O len 4430 para 103 probe 33 flip 5 commit 0.18 팔일치 2/3 gold거침 1 | 916분 경과, 남은 10.9시간
+  293/500 L4 X len 8192 para 313 probe 47 flip 4 commit None 팔일치 3/3 gold거침 1 | 922분 경과, 남은 10.9시간
+  294/500 L5 O len 2671 para 86 probe 15 flip 2 commit 0.22 팔일치 0/3 gold거침 1 | 924분 경과, 남은 10.8시간
+  295/500 L4 O len 5588 para 44 probe 16 flip 5 commit 0.29 팔일치 1/3 gold거침 1 | 928분 경과, 남은 10.7시간
+  296/500 L3 X len 8192 para 145 probe 49 flip 2 commit None 팔일치 3/3 gold거침 1 | 934분 경과, 남은 10.7시간
+  297/500 L2 X len 8192 para 121 probe 44 flip 3 commit None 팔일치 3/3 gold거침 0 | 939분 경과, 남은 10.7시간
+  298/500 L4 O len 2607 para 47 probe 12 flip 3 commit 0.34 팔일치 3/3 gold거침 1 | 941분 경과, 남은 10.6시간
+  299/500 L4 O len 2778 para 102 probe 13 flip 4 commit 0.38 팔일치 1/3 gold거침 1 | 943분 경과, 남은 10.6시간
+  300/500 L4 O len 5197 para 123 probe 33 flip 5 commit 0.19 팔일치 3/3 gold거침 1 | 947분 경과, 남은 10.5시간
+  301/500 L4 X len 8192 para 214 probe 64 flip 1 commit None 팔일치 3/3 gold거침 1 | 953분 경과, 남은 10.5시간
+  302/500 L5 X len 8192 para 283 probe 58 flip 10 commit None 팔일치 3/3 gold거침 0 | 958분 경과, 남은 10.5시간
+  303/500 L4 X len 8192 para 136 probe 40 flip 0 commit None 팔일치 3/3 gold거침 1 | 964분 경과, 남은 10.4시간
+  304/500 L5 O len 7365 para 167 probe 44 flip 11 commit 0.7 팔일치 0/3 gold거침 1 | 969분 경과, 남은 10.4시간
+  305/500 L3 O len 3780 para 130 probe 21 flip 3 commit 0.41 팔일치 3/3 gold거침 1 | 972분 경과, 남은 10.4시간
+  306/500 L4 X len 2587 para 81 probe 14 flip 1 commit 0.25 팔일치 3/3 gold거침 0 | 973분 경과, 남은 10.3시간
+  307/500 L5 X len 8192 para 159 probe 51 flip 4 commit None 팔일치 3/3 gold거침 1 | 979분 경과, 남은 10.3시간
+  308/500 L2 O len 4423 para 72 probe 20 flip 0 commit 0.04 팔일치 1/3 gold거침 1 | 982분 경과, 남은 10.2시간
+  309/500 L5 X len 8192 para 140 probe 47 flip 13 commit None 팔일치 3/3 gold거침 0 | 988분 경과, 남은 10.2시간
+  310/500 L3 O len 7841 para 270 probe 46 flip 5 commit 0.17 팔일치 3/3 gold거침 1 | 993분 경과, 남은 10.1시간
+  311/500 L2 O len 3686 para 131 probe 26 flip 4 commit 0.21 팔일치 1/3 gold거침 1 | 996분 경과, 남은 10.1시간
+  312/500 L4 O len 5707 para 113 probe 25 flip 2 commit 0.17 팔일치 2/3 gold거침 1 | 1000분 경과, 남은 10.0시간
+  313/500 L1 O len 2033 para 61 probe 15 flip 3 commit None 팔일치 3/3 gold거침 0 | 1002분 경과, 남은 10.0시간
+  314/500 L5 O len 2223 para 62 probe 14 flip 1 commit 0.17 팔일치 3/3 gold거침 1 | 1003분 경과, 남은 9.9시간
+  315/500 L2 O len 2586 para 60 probe 16 flip 2 commit None 팔일치 3/3 gold거침 0 | 1005분 경과, 남은 9.8시간
+  316/500 L4 O len 3768 para 58 probe 11 flip 1 commit 0.41 팔일치 3/3 gold거침 1 | 1008분 경과, 남은 9.8시간
+  317/500 L2 O len 3604 para 148 probe 21 flip 4 commit 0.3 팔일치 3/3 gold거침 1 | 1010분 경과, 남은 9.7시간
+  318/500 L5 O len 5537 para 146 probe 35 flip 1 commit 0.24 팔일치 3/3 gold거침 1 | 1014분 경과, 남은 9.7시간
+  319/500 L2 X len 2224 para 41 probe 10 flip 3 commit 0.31 팔일치 3/3 gold거침 1 | 1016분 경과, 남은 9.6시간
+  320/500 L3 O len 1874 para 79 probe 11 flip 4 commit 0.4 팔일치 3/3 gold거침 1 | 1017분 경과, 남은 9.5시간
+  321/500 L5 O len 3339 para 54 probe 14 flip 1 commit 0.45 팔일치 3/3 gold거침 1 | 1019분 경과, 남은 9.5시간
+  322/500 L5 O len 3072 para 104 probe 21 flip 3 commit 0.31 팔일치 1/3 gold거침 1 | 1022분 경과, 남은 9.4시간
+  323/500 L3 O len 1497 para 57 probe 9 flip 1 commit 0.33 팔일치 0/3 gold거침 1 | 1023분 경과, 남은 9.3시간
+  324/500 L5 X len 8192 para 89 probe 52 flip 0 commit None 팔일치 3/3 gold거침 1 | 1028분 경과, 남은 9.3시간
+  325/500 L4 X len 8192 para 180 probe 60 flip 6 commit None 팔일치 3/3 gold거침 1 | 1034분 경과, 남은 9.3시간
+  326/500 L2 O len 1859 para 62 probe 12 flip 2 commit 0.23 팔일치 1/3 gold거침 1 | 1035분 경과, 남은 9.2시간
+  327/500 L2 O len 5048 para 128 probe 26 flip 4 commit 0.36 팔일치 1/3 gold거침 1 | 1039분 경과, 남은 9.2시간
+  328/500 L5 O len 6226 para 218 probe 27 flip 6 commit 0.73 팔일치 3/3 gold거침 1 | 1043분 경과, 남은 9.1시간
+  329/500 L5 O len 7345 para 81 probe 26 flip 4 commit 0.37 팔일치 3/3 gold거침 1 | 1048분 경과, 남은 9.1시간
+  330/500 L4 O len 1052 para 34 probe 7 flip 1 commit 0.28 팔일치 2/3 gold거침 1 | 1049분 경과, 남은 9.0시간
+  331/500 L5 O len 3570 para 114 probe 19 flip 5 commit 0.37 팔일치 3/3 gold거침 1 | 1051분 경과, 남은 8.9시간
+  332/500 L5 O len 3643 para 104 probe 19 flip 1 commit 0.38 팔일치 2/3 gold거침 1 | 1054분 경과, 남은 8.9시간
+  333/500 L4 O len 7905 para 218 probe 47 flip 5 commit 0.33 팔일치 3/3 gold거침 1 | 1059분 경과, 남은 8.9시간
+  334/500 L4 O len 6084 para 126 probe 29 flip 0 commit 0.03 팔일치 2/3 gold거침 1 | 1063분 경과, 남은 8.8시간
+  335/500 L3 O len 3244 para 103 probe 20 flip 2 commit 0.24 팔일치 1/3 gold거침 1 | 1066분 경과, 남은 8.7시간
+  336/500 L4 O len 5756 para 150 probe 29 flip 6 commit 0.49 팔일치 3/3 gold거침 1 | 1069분 경과, 남은 8.7시간
+  337/500 L1 O len 2139 para 46 probe 10 flip 3 commit 0.47 팔일치 2/3 gold거침 1 | 1071분 경과, 남은 8.6시간
+  338/500 L3 O len 2734 para 79 probe 14 flip 1 commit 0.24 팔일치 3/3 gold거침 1 | 1073분 경과, 남은 8.6시간
+  339/500 L3 X len 3549 para 100 probe 18 flip 4 commit 0.32 팔일치 2/3 gold거침 1 | 1075분 경과, 남은 8.5시간
+  340/500 L3 O len 4077 para 127 probe 25 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 1078분 경과, 남은 8.5시간
+  341/500 L3 X len 8192 para 255 probe 48 flip 13 commit None 팔일치 3/3 gold거침 1 | 1084분 경과, 남은 8.4시간
+  342/500 L4 O len 2433 para 92 probe 15 flip 2 commit 0.39 팔일치 1/3 gold거침 1 | 1086분 경과, 남은 8.4시간
+  343/500 L3 O len 3509 para 94 probe 20 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 1088분 경과, 남은 8.3시간
+  344/500 L2 O len 2560 para 68 probe 18 flip 2 commit 0.33 팔일치 3/3 gold거침 1 | 1090분 경과, 남은 8.2시간
+  345/500 L2 O len 2095 para 61 probe 12 flip 1 commit 0.3 팔일치 3/3 gold거침 1 | 1091분 경과, 남은 8.2시간
+  346/500 L3 O len 3146 para 76 probe 20 flip 2 commit 0.2 팔일치 3/3 gold거침 1 | 1094분 경과, 남은 8.1시간
+  347/500 L4 O len 3478 para 97 probe 17 flip 4 commit 0.45 팔일치 2/3 gold거침 1 | 1096분 경과, 남은 8.1시간
+  348/500 L3 O len 3150 para 152 probe 20 flip 3 commit 0.19 팔일치 0/3 gold거침 1 | 1099분 경과, 남은 8.0시간
+  349/500 L2 O len 3840 para 145 probe 23 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 1101분 경과, 남은 7.9시간
+  350/500 L4 X len 8192 para 133 probe 59 flip 15 commit None 팔일치 3/3 gold거침 1 | 1107분 경과, 남은 7.9시간
+  351/500 L2 O len 5185 para 164 probe 26 flip 3 commit 0.21 팔일치 2/3 gold거침 1 | 1111분 경과, 남은 7.9시간
+  352/500 L3 O len 7025 para 163 probe 34 flip 6 commit 0.89 팔일치 0/3 gold거침 1 | 1116분 경과, 남은 7.8시간
+  353/500 L4 X len 8192 para 164 probe 42 flip 15 commit None 팔일치 3/3 gold거침 0 | 1122분 경과, 남은 7.8시간
+  354/500 L4 O len 5077 para 206 probe 43 flip 5 commit 0.17 팔일치 3/3 gold거침 1 | 1125분 경과, 남은 7.7시간
+  355/500 L4 O len 2076 para 62 probe 9 flip 0 commit 0.08 팔일치 3/3 gold거침 1 | 1127분 경과, 남은 7.7시간
+  356/500 L5 O len 8192 para 283 probe 53 flip 4 commit 0.39 팔일치 3/3 gold거침 1 | 1133분 경과, 남은 7.6시간
+  357/500 L5 O len 2844 para 83 probe 17 flip 4 commit 0.33 팔일치 1/3 gold거침 1 | 1135분 경과, 남은 7.6시간
+  358/500 L5 O len 4045 para 125 probe 24 flip 3 commit 0.22 팔일치 3/3 gold거침 1 | 1138분 경과, 남은 7.5시간
+  359/500 L2 O len 3043 para 97 probe 18 flip 1 commit 0.22 팔일치 3/3 gold거침 1 | 1140분 경과, 남은 7.5시간
+  360/500 L4 O len 3766 para 137 probe 21 flip 6 commit 0.52 팔일치 3/3 gold거침 1 | 1142분 경과, 남은 7.4시간
+  361/500 L3 O len 5268 para 178 probe 37 flip 5 commit 0.35 팔일치 0/3 gold거침 1 | 1146분 경과, 남은 7.4시간
+  362/500 L4 X len 8192 para 179 probe 42 flip 3 commit None 팔일치 3/3 gold거침 1 | 1152분 경과, 남은 7.3시간
+  363/500 L1 O len 3419 para 91 probe 30 flip 0 commit 0.02 팔일치 3/3 gold거침 1 | 1154분 경과, 남은 7.3시간
+  364/500 L2 O len 1955 para 75 probe 12 flip 0 commit 0.08 팔일치 3/3 gold거침 1 | 1156분 경과, 남은 7.2시간
+  365/500 L4 O len 3470 para 116 probe 16 flip 10 commit None 팔일치 3/3 gold거침 0 | 1158분 경과, 남은 7.1시간
+  366/500 L5 O len 7868 para 92 probe 31 flip 3 commit 0.22 팔일치 1/3 gold거침 1 | 1164분 경과, 남은 7.1시간
+  367/500 L4 O len 4246 para 166 probe 25 flip 3 commit 0.26 팔일치 3/3 gold거침 1 | 1166분 경과, 남은 7.0시간
+  368/500 L4 O len 1585 para 51 probe 9 flip 1 commit 0.23 팔일치 3/3 gold거침 1 | 1168분 경과, 남은 7.0시간
+  369/500 L2 O len 2810 para 89 probe 18 flip 2 commit 0.26 팔일치 3/3 gold거침 1 | 1169분 경과, 남은 6.9시간
+  370/500 L2 O len 4633 para 68 probe 23 flip 4 commit 0.59 팔일치 3/3 gold거침 1 | 1173분 경과, 남은 6.9시간
+  371/500 L1 O len 2404 para 55 probe 14 flip 2 commit 0.27 팔일치 3/3 gold거침 1 | 1174분 경과, 남은 6.8시간
+  372/500 L5 X len 8192 para 234 probe 58 flip 2 commit None 팔일치 3/3 gold거침 1 | 1180분 경과, 남은 6.8시간
+  373/500 L2 O len 7846 para 145 probe 35 flip 3 commit 0.77 팔일치 3/3 gold거침 1 | 1186분 경과, 남은 6.7시간
+  374/500 L5 O len 2985 para 120 probe 20 flip 3 commit 0.28 팔일치 3/3 gold거침 1 | 1188분 경과, 남은 6.7시간
+  375/500 L1 O len 2230 para 56 probe 14 flip 2 commit 0.22 팔일치 3/3 gold거침 1 | 1189분 경과, 남은 6.6시간
+  376/500 L5 O len 2609 para 51 probe 11 flip 3 commit 0.54 팔일치 3/3 gold거침 1 | 1191분 경과, 남은 6.5시간
+  377/500 L4 O len 2721 para 98 probe 13 flip 4 commit None 팔일치 3/3 gold거침 0 | 1193분 경과, 남은 6.5시간
+  378/500 L3 O len 6920 para 105 probe 31 flip 2 commit 0.35 팔일치 2/3 gold거침 1 | 1198분 경과, 남은 6.4시간
+  379/500 L3 O len 3419 para 125 probe 18 flip 4 commit 0.33 팔일치 3/3 gold거침 1 | 1200분 경과, 남은 6.4시간
+  380/500 L4 O len 7408 para 258 probe 49 flip 5 commit None 팔일치 2/3 gold거침 0 | 1206분 경과, 남은 6.3시간
+  381/500 L4 O len 5583 para 95 probe 29 flip 6 commit 0.89 팔일치 1/3 gold거침 1 | 1211분 경과, 남은 6.3시간
+  382/500 L5 X len 8192 para 204 probe 56 flip 4 commit None 팔일치 3/3 gold거침 1 | 1217분 경과, 남은 6.3시간
+  383/500 L5 O len 3743 para 111 probe 25 flip 3 commit None 팔일치 3/3 gold거침 0 | 1219분 경과, 남은 6.2시간
+  384/500 L4 X len 2314 para 75 probe 13 flip 3 commit 0.3 팔일치 0/3 gold거침 0 | 1221분 경과, 남은 6.1시간
+  385/500 L2 O len 1289 para 46 probe 6 flip 0 commit 0.13 팔일치 3/3 gold거침 1 | 1222분 경과, 남은 6.1시간
+  386/500 L5 X len 8192 para 160 probe 45 flip 10 commit None 팔일치 3/3 gold거침 1 | 1228분 경과, 남은 6.0시간
+  387/500 L3 O len 2707 para 81 probe 17 flip 3 commit 0.29 팔일치 3/3 gold거침 1 | 1230분 경과, 남은 6.0시간
+  388/500 L1 O len 1597 para 55 probe 10 flip 2 commit 0.28 팔일치 2/3 gold거침 1 | 1231분 경과, 남은 5.9시간
+  389/500 L5 O len 2552 para 59 probe 14 flip 2 commit 0.19 팔일치 2/3 gold거침 1 | 1233분 경과, 남은 5.9시간
+  390/500 L3 O len 3580 para 68 probe 20 flip 4 commit 0.33 팔일치 2/3 gold거침 1 | 1235분 경과, 남은 5.8시간
+  391/500 L5 O len 6392 para 136 probe 36 flip 4 commit 0.26 팔일치 1/3 gold거침 1 | 1240분 경과, 남은 5.8시간
+  392/500 L5 O len 5191 para 180 probe 33 flip 4 commit 0.58 팔일치 3/3 gold거침 1 | 1243분 경과, 남은 5.7시간
+  393/500 L5 X len 8192 para 262 probe 61 flip 4 commit None 팔일치 3/3 gold거침 0 | 1249분 경과, 남은 5.7시간
+  394/500 L3 O len 1934 para 68 probe 13 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 1250분 경과, 남은 5.6시간
+  395/500 L5 O len 6204 para 239 probe 34 flip 7 commit 0.54 팔일치 1/3 gold거침 1 | 1255분 경과, 남은 5.6시간
+  396/500 L1 O len 4350 para 113 probe 27 flip 1 commit 0.07 팔일치 1/3 gold거침 1 | 1258분 경과, 남은 5.5시간
+  397/500 L3 X len 8192 para 187 probe 54 flip 0 commit None 팔일치 3/3 gold거침 1 | 1264분 경과, 남은 5.5시간
+  398/500 L2 O len 2722 para 106 probe 19 flip 2 commit 0.15 팔일치 2/3 gold거침 1 | 1266분 경과, 남은 5.4시간
+  399/500 L4 O len 7193 para 148 probe 35 flip 2 commit 0.18 팔일치 2/3 gold거침 1 | 1271분 경과, 남은 5.4시간
+  400/500 L2 O len 2205 para 47 probe 11 flip 0 commit 0.08 팔일치 3/3 gold거침 1 | 1272분 경과, 남은 5.3시간
+  401/500 L5 X len 8192 para 131 probe 51 flip 8 commit None 팔일치 3/3 gold거침 0 | 1278분 경과, 남은 5.3시간
+  402/500 L5 X len 8192 para 124 probe 39 flip 5 commit None 팔일치 3/3 gold거침 1 | 1284분 경과, 남은 5.2시간
+  403/500 L3 O len 2770 para 125 probe 21 flip 5 commit 0.29 팔일치 2/3 gold거침 1 | 1286분 경과, 남은 5.2시간
+  404/500 L4 X len 8192 para 347 probe 77 flip 3 commit None 팔일치 3/3 gold거침 1 | 1292분 경과, 남은 5.1시간
+  405/500 L1 O len 1365 para 38 probe 9 flip 1 commit 0.33 팔일치 3/3 gold거침 1 | 1293분 경과, 남은 5.1시간
+  406/500 L4 O len 1882 para 35 probe 10 flip 0 commit 0.08 팔일치 3/3 gold거침 1 | 1294분 경과, 남은 5.0시간
+  407/500 L1 O len 2976 para 71 probe 15 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 1296분 경과, 남은 4.9시간
+  408/500 L4 O len 2706 para 132 probe 15 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 1298분 경과, 남은 4.9시간
+  409/500 L5 X len 6538 para 133 probe 38 flip 10 commit 0.44 팔일치 3/3 gold거침 0 | 1305분 경과, 남은 4.8시간
+  410/500 L4 O len 5170 para 155 probe 26 flip 4 commit 0.26 팔일치 1/3 gold거침 1 | 1309분 경과, 남은 4.8시간
+  411/500 L2 O len 3466 para 96 probe 20 flip 0 commit 0.04 팔일치 0/3 gold거침 1 | 1311분 경과, 남은 4.7시간
+  412/500 L3 O len 2115 para 63 probe 15 flip 0 commit 0.06 팔일치 3/3 gold거침 1 | 1313분 경과, 남은 4.7시간
+  413/500 L4 O len 4612 para 132 probe 21 flip 6 commit 0.64 팔일치 3/3 gold거침 1 | 1316분 경과, 남은 4.6시간
+  414/500 L2 O len 1261 para 55 probe 7 flip 0 commit 0.1 팔일치 2/3 gold거침 1 | 1317분 경과, 남은 4.6시간
+  415/500 L4 O len 1497 para 58 probe 8 flip 2 commit 0.58 팔일치 3/3 gold거침 1 | 1318분 경과, 남은 4.5시간
+  416/500 L5 O len 5272 para 176 probe 28 flip 6 commit 0.26 팔일치 3/3 gold거침 1 | 1321분 경과, 남은 4.4시간
+  417/500 L3 X len 8192 para 160 probe 41 flip 8 commit None 팔일치 3/3 gold거침 0 | 1327분 경과, 남은 4.4시간
+  418/500 L5 O len 3121 para 102 probe 16 flip 5 commit 0.66 팔일치 2/3 gold거침 1 | 1329분 경과, 남은 4.3시간
+  419/500 L5 O len 2779 para 50 probe 12 flip 0 commit 0.03 팔일치 1/3 gold거침 1 | 1331분 경과, 남은 4.3시간
+  420/500 L4 O len 5941 para 158 probe 32 flip 9 commit 0.32 팔일치 3/3 gold거침 1 | 1336분 경과, 남은 4.2시간
+  421/500 L3 X len 2615 para 65 probe 19 flip 2 commit None 팔일치 3/3 gold거침 0 | 1340분 경과, 남은 4.2시간
+  422/500 L5 X len 8192 para 130 probe 39 flip 2 commit None 팔일치 3/3 gold거침 1 | 1346분 경과, 남은 4.1시간
+  423/500 L5 X len 8192 para 221 probe 50 flip 21 commit None 팔일치 3/3 gold거침 0 | 1353분 경과, 남은 4.1시간
+  424/500 L5 O len 5810 para 119 probe 24 flip 7 commit 0.35 팔일치 3/3 gold거침 1 | 1357분 경과, 남은 4.1시간
+  425/500 L5 O len 2175 para 75 probe 12 flip 3 commit 0.38 팔일치 1/3 gold거침 1 | 1358분 경과, 남은 4.0시간
+  426/500 L5 X len 8192 para 99 probe 45 flip 11 commit None 팔일치 3/3 gold거침 1 | 1365분 경과, 남은 4.0시간
+  427/500 L3 O len 1935 para 80 probe 12 flip 2 commit 0.25 팔일치 3/3 gold거침 1 | 1366분 경과, 남은 3.9시간
+  428/500 L2 O len 1579 para 56 probe 9 flip 3 commit 0.42 팔일치 3/3 gold거침 1 | 1367분 경과, 남은 3.8시간
+  429/500 L4 O len 7711 para 148 probe 45 flip 5 commit 0.18 팔일치 3/3 gold거침 1 | 1372분 경과, 남은 3.8시간
+  430/500 L3 O len 4389 para 143 probe 23 flip 7 commit 0.4 팔일치 3/3 gold거침 1 | 1376분 경과, 남은 3.7시간
+  431/500 L2 O len 1254 para 29 probe 5 flip 0 commit 0.13 팔일치 3/3 gold거침 1 | 1376분 경과, 남은 3.7시간
+  432/500 L4 O len 6768 para 105 probe 30 flip 5 commit 0.29 팔일치 1/3 gold거침 1 | 1382분 경과, 남은 3.6시간
+  433/500 L5 X len 8192 para 201 probe 43 flip 5 commit None 팔일치 3/3 gold거침 1 | 1388분 경과, 남은 3.6시간
+  434/500 L2 O len 3041 para 47 probe 12 flip 0 commit 0.03 팔일치 3/3 gold거침 1 | 1390분 경과, 남은 3.5시간
+  435/500 L5 O len 2009 para 42 probe 9 flip 1 commit 0.51 팔일치 3/3 gold거침 1 | 1392분 경과, 남은 3.5시간
+  436/500 L5 O len 2533 para 50 probe 12 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 1394분 경과, 남은 3.4시간
+  437/500 L4 O len 5172 para 188 probe 26 flip 1 commit 0.29 팔일치 2/3 gold거침 1 | 1397분 경과, 남은 3.4시간
+  438/500 L3 O len 2477 para 62 probe 10 flip 2 commit 0.5 팔일치 2/3 gold거침 1 | 1399분 경과, 남은 3.3시간
+  439/500 L2 O len 4364 para 151 probe 31 flip 1 commit 0.18 팔일치 3/3 gold거침 1 | 1402분 경과, 남은 3.2시간
+  440/500 L3 O len 5439 para 82 probe 23 flip 4 commit None 팔일치 3/3 gold거침 1 | 1407분 경과, 남은 3.2시간
+  441/500 L3 O len 2012 para 90 probe 11 flip 3 commit 0.35 팔일치 3/3 gold거침 1 | 1409분 경과, 남은 3.1시간
+  442/500 L4 O len 1468 para 29 probe 7 flip 2 commit 0.41 팔일치 3/3 gold거침 1 | 1410분 경과, 남은 3.1시간
+  443/500 L4 O len 3298 para 91 probe 20 flip 2 commit 0.21 팔일치 2/3 gold거침 1 | 1412분 경과, 남은 3.0시간
+  444/500 L4 O len 2104 para 76 probe 13 flip 2 commit 0.28 팔일치 2/3 gold거침 1 | 1414분 경과, 남은 3.0시간
+  445/500 L5 X len 8192 para 84 probe 37 flip 23 commit None 팔일치 3/3 gold거침 1 | 1420분 경과, 남은 2.9시간
+  446/500 L4 X len 8192 para 77 probe 29 flip 3 commit None 팔일치 3/3 gold거침 1 | 1426분 경과, 남은 2.9시간
+  447/500 L4 O len 3055 para 131 probe 14 flip 0 commit 0.07 팔일치 3/3 gold거침 1 | 1428분 경과, 남은 2.8시간
+  448/500 L1 O len 1433 para 45 probe 7 flip 1 commit 0.22 팔일치 0/3 gold거침 1 | 1429분 경과, 남은 2.8시간
+  449/500 L5 O len 4508 para 71 probe 19 flip 2 commit 0.23 팔일치 3/3 gold거침 1 | 1432분 경과, 남은 2.7시간
+  450/500 L1 O len 2485 para 105 probe 16 flip 1 commit 0.11 팔일치 3/3 gold거침 1 | 1434분 경과, 남은 2.7시간
+  451/500 L5 O len 4996 para 141 probe 26 flip 4 commit 0.27 팔일치 3/3 gold거침 1 | 1437분 경과, 남은 2.6시간
+  452/500 L3 O len 3340 para 58 probe 16 flip 4 commit 0.32 팔일치 1/3 gold거침 1 | 1439분 경과, 남은 2.5시간
+  453/500 L2 O len 3603 para 113 probe 19 flip 4 commit 0.28 팔일치 0/3 gold거침 1 | 1442분 경과, 남은 2.5시간
+  454/500 L2 O len 2516 para 65 probe 17 flip 1 commit 0.09 팔일치 1/3 gold거침 1 | 1444분 경과, 남은 2.4시간
+  455/500 L5 O len 4163 para 138 probe 23 flip 2 commit 0.38 팔일치 1/3 gold거침 1 | 1447분 경과, 남은 2.4시간
+  456/500 L2 O len 1501 para 32 probe 9 flip 0 commit 0.1 팔일치 3/3 gold거침 1 | 1448분 경과, 남은 2.3시간
+  457/500 L1 O len 5371 para 141 probe 29 flip 0 commit None 팔일치 3/3 gold거침 0 | 1452분 경과, 남은 2.3시간
+  458/500 L1 O len 1891 para 47 probe 11 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 1453분 경과, 남은 2.2시간
+  459/500 L3 O len 2675 para 32 probe 8 flip 2 commit 0.39 팔일치 3/3 gold거침 1 | 1455분 경과, 남은 2.2시간
+  460/500 L5 O len 4349 para 135 probe 26 flip 3 commit 0.32 팔일치 1/3 gold거침 1 | 1458분 경과, 남은 2.1시간
+  461/500 L4 X len 8192 para 110 probe 44 flip 4 commit None 팔일치 3/3 gold거침 1 | 1464분 경과, 남은 2.1시간
+  462/500 L4 O len 2187 para 38 probe 8 flip 3 commit 0.5 팔일치 2/3 gold거침 1 | 1465분 경과, 남은 2.0시간
+  463/500 L2 O len 3988 para 70 probe 21 flip 5 commit 0.34 팔일치 3/3 gold거침 1 | 1468분 경과, 남은 2.0시간
+  464/500 L2 O len 1402 para 44 probe 9 flip 0 commit 0.1 팔일치 3/3 gold거침 1 | 1469분 경과, 남은 1.9시간
+  465/500 L3 O len 2584 para 104 probe 11 flip 2 commit 0.36 팔일치 3/3 gold거침 1 | 1471분 경과, 남은 1.8시간
+  466/500 L4 O len 4891 para 196 probe 29 flip 3 commit 0.15 팔일치 3/3 gold거침 1 | 1474분 경과, 남은 1.8시간
+  467/500 L5 O len 7192 para 172 probe 35 flip 2 commit 0.57 팔일치 2/3 gold거침 1 | 1479분 경과, 남은 1.7시간
+  468/500 L2 X len 4646 para 93 probe 25 flip 0 commit 0.03 팔일치 3/3 gold거침 0 | 1483분 경과, 남은 1.7시간
+  469/500 L4 O len 2857 para 59 probe 17 flip 3 commit 0.19 팔일치 3/3 gold거침 1 | 1485분 경과, 남은 1.6시간
+  470/500 L3 O len 3282 para 70 probe 16 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 1487분 경과, 남은 1.6시간
+  471/500 L5 X len 8192 para 230 probe 46 flip 3 commit None 팔일치 3/3 gold거침 1 | 1493분 경과, 남은 1.5시간
+  472/500 L3 O len 1934 para 35 probe 11 flip 1 commit 0.23 팔일치 3/3 gold거침 1 | 1494분 경과, 남은 1.5시간
+  473/500 L1 O len 1661 para 33 probe 7 flip 1 commit 0.19 팔일치 1/3 gold거침 1 | 1496분 경과, 남은 1.4시간
+  474/500 L5 O len 3096 para 107 probe 15 flip 1 commit 0.47 팔일치 2/3 gold거침 1 | 1498분 경과, 남은 1.4시간
+  475/500 L1 O len 1946 para 51 probe 9 flip 0 commit 0.11 팔일치 0/3 gold거침 1 | 1499분 경과, 남은 1.3시간
+  476/500 L5 O len 6138 para 161 probe 31 flip 5 commit 0.45 팔일치 1/3 gold거침 1 | 1503분 경과, 남은 1.3시간
+  477/500 L2 O len 3628 para 86 probe 27 flip 1 commit 0.21 팔일치 3/3 gold거침 1 | 1506분 경과, 남은 1.2시간
+  478/500 L3 O len 4159 para 104 probe 23 flip 0 commit 0.04 팔일치 3/3 gold거침 1 | 1509분 경과, 남은 1.2시간
+  479/500 L5 X len 8192 para 235 probe 48 flip 0 commit None 팔일치 3/3 gold거침 0 | 1515분 경과, 남은 1.1시간
+  480/500 L5 O len 3903 para 110 probe 24 flip 0 commit 0.05 팔일치 0/3 gold거침 1 | 1517분 경과, 남은 1.1시간
+  481/500 L2 O len 3912 para 78 probe 19 flip 0 commit 0.05 팔일치 3/3 gold거침 1 | 1520분 경과, 남은 1.0시간
+  482/500 L5 X len 8192 para 169 probe 47 flip 23 commit None 팔일치 3/3 gold거침 1 | 1527분 경과, 남은 1.0시간
+  483/500 L5 O len 4137 para 55 probe 12 flip 2 commit 0.41 팔일치 3/3 gold거침 1 | 1530분 경과, 남은 0.9시간
+  484/500 L3 O len 5569 para 197 probe 30 flip 4 commit 0.32 팔일치 3/3 gold거침 1 | 1534분 경과, 남은 0.8시간
+  485/500 L3 O len 5630 para 178 probe 30 flip 1 commit 0.3 팔일치 3/3 gold거침 1 | 1538분 경과, 남은 0.8시간
+  486/500 L2 O len 7538 para 285 probe 50 flip 1 commit 0.3 팔일치 3/3 gold거침 1 | 1543분 경과, 남은 0.7시간
+  487/500 L3 X len 8192 para 114 probe 61 flip 0 commit None 팔일치 3/3 gold거침 1 | 1549분 경과, 남은 0.7시간
+  488/500 L1 O len 2732 para 107 probe 13 flip 1 commit 0.13 팔일치 3/3 gold거침 1 | 1551분 경과, 남은 0.6시간
+  489/500 L5 O len 1448 para 46 probe 7 flip 0 commit 0.11 팔일치 3/3 gold거침 1 | 1552분 경과, 남은 0.6시간
+  490/500 L3 O len 6420 para 141 probe 33 flip 6 commit 0.23 팔일치 3/3 gold거침 1 | 1557분 경과, 남은 0.5시간
+  491/500 L5 X len 8192 para 76 probe 39 flip 7 commit None 팔일치 3/3 gold거침 1 | 1562분 경과, 남은 0.5시간
+  492/500 L5 O len 5943 para 104 probe 36 flip 5 commit 0.75 팔일치 1/3 gold거침 1 | 1567분 경과, 남은 0.4시간
+  493/500 L3 O len 2964 para 91 probe 18 flip 1 commit 0.19 팔일치 3/3 gold거침 1 | 1569분 경과, 남은 0.4시간
+  494/500 L5 O len 8090 para 174 probe 45 flip 4 commit 0.22 팔일치 1/3 gold거침 1 | 1575분 경과, 남은 0.3시간
+  495/500 L5 X len 8192 para 113 probe 46 flip 7 commit None 팔일치 3/3 gold거침 1 | 1580분 경과, 남은 0.3시간
+  496/500 L4 O len 3289 para 76 probe 17 flip 8 commit None 팔일치 1/3 gold거침 1 | 1583분 경과, 남은 0.2시간
+  497/500 L3 O len 2938 para 61 probe 14 flip 1 commit 0.54 팔일치 2/3 gold거침 1 | 1585분 경과, 남은 0.2시간
+  498/500 L5 X len 8192 para 201 probe 52 flip 3 commit None 팔일치 3/3 gold거침 1 | 1591분 경과, 남은 0.1시간
+  499/500 L5 O len 3994 para 109 probe 19 flip 1 commit 0.62 팔일치 1/3 gold거침 1 | 1594분 경과, 남은 0.1시간
+  500/500 L4 O len 4976 para 129 probe 31 flip 2 commit 0.13 팔일치 3/3 gold거침 1 | 1598분 경과, 남은 0.0시간
+
+==============================================================================
+500문항.  완주 402 (절단 19.6%).  정확도 95.3%
+think 길이 중앙값 2618 토큰, probe 중앙값 17회
+내부 신호 15종 × 체크포인트 중앙 97개 (500건에 기록)
+  dl_q1, dl_q2, dl_q3, h_cos, h_delta, h_delta_rel, h_norm, layer_agree, layer_ent_drop, layer_ent_mean, layer_kl, margin, tok_ent, top1, top5_mass
+
+==============================================================================
+=== probe 팔 4개: 라벨이 표현에 의존하나 ===
+   팔 |  commit 있음 |     A 와 동일 |   commit_frac 중앙
+----------------------------------------------------
+   A |  384/500   |        384 |            0.239
+   B |  386/500   |        329 |            0.238
+   C |  370/500   |        261 |            0.251
+   D |  383/500   |        294 |            0.241
+  A vs B 답 불일치율: 앞쪽 1/10 17.8% (n=1200),  뒤쪽 1/3 4.6% (n=4440)
+  A vs C 답 불일치율: 앞쪽 1/10 34.3% (n=1200),  뒤쪽 1/3 10.4% (n=4440)
+  A vs D 답 불일치율: 앞쪽 1/10 27.4% (n=1200),  뒤쪽 1/3 8.2% (n=4440)
+  A vs B 가 크면 → 라벨이 표현에 의존한다. 그 위에 올라앉은 모든 숫자가 흔들린다
+  C vs D 가 유일한 '적대적 섭동의 내용 효과' 다 (길이가 맞춰진 대조군)
+
+==============================================================================
+=== 이득 상한 ===
+            집단 |   건수 |        중간에 정답 거침
+--------------------------------------------
+         완주 오답 |   19 |        4 (  21%)
+            절단 |   98 |       73 (  74%)
+            합계 |  117 |       77 (  66%)
+
+→ **조기 종료 상한 65.8%**  (절단=오답 기준 정확도 76.6% → 92.0%, +15.4%p)
+   실패 건이 정답에 처음 도달한 시점 중앙값: 체인의 21% 지점
+  probe 가 '그 시점에 멈췄다면 뭐라 답했을까' 를 이미 갖고 있으므로,
+  어떤 조기 종료 탐지기도 이 값을 넘지 못한다.
+  => 10% 이상. 탐지기를 만들 가치가 있다
+
+=== 실패 방향 분해 (처방이 반대라 섞어 세면 안 된다) ===
+  locked_wrong    정답을 한 번도 안 거침     40건 (34.2%) → 더 생각해야 함
+  right_abandoned 정답을 거쳤는데 번복        4건 (3.4%) → 덜 생각해야 함
+  truncated_right 정답을 거쳤는데 예산소진   73건 (62.4%) → 멈추기만 하면 됨
+  번복 건의 첫 정답 도달 시점 중앙값 17.1% 지점 — 이보다 뒤의 토큰은 순손실
+  절단 건의 첫 정답 도달 시점 중앙값 22.1% 지점 — 이보다 뒤의 토큰은 순손실
+
+==============================================================================
+=== commit_frac (확신 고정 시점) ===
+  정답 0.238 (n=366)  vs  오답 0.247 (n=15)   [중앙값]
+  Mann-Whitney p = 8.06e-01
+  오답이 더 낮으면 '일찍 고정한 쪽이 더 틀린다' 가 성립한다
+  최종 답이 probe 열에 한 번도 안 나타난 건 21 (5.2%) — 답이 </think> 이후에 결정된 경우
+
+==============================================================================
+=== 온라인 탐지기: '지금 멈추면 이득' 탐지 ===
+대상 = 실패(오답+절단) & 중간에 정답 있음.  기저율 15.4% (77/500)
+※ 정밀도는 반드시 이 기저율과 비교. 리프트가 없으면 신호가 없는 것이다
+
+            특징   방향 |        임계 |    발화 |    정밀도 |     리프트 |    재현
+--------------------------------------------------------------------
+      n_probes   높음 |    52.000 |    42 |  69.0% |  +53.6% |   38%
+      n_probes   높음 |    59.000 |    24 |  66.7% |  +51.3% |   21%
+      n_probes   높음 |    45.000 |    79 |  65.8% |  +50.4% |   68%
+     think_len   높음 |  6148.000 |   120 |  60.0% |  +44.6% |   94%
+       n_flips   높음 |    13.000 |    20 |  50.0% |  +34.6% |   13%
+       n_flips   높음 |    15.000 |    13 |  46.2% |  +30.8% |    8%
+    margin_med   낮음 |     0.994 |    38 |  44.7% |  +29.3% |   22%
+     think_len   높음 |  4742.000 |   162 |  44.4% |  +29.0% |   94%
+
+라벨 순열 귀무분포 (50개 조합, 300회): 최고 리프트 중앙값 +9.6%, 95% 지점 +22.1%
+관측 최고 리프트 +53.6% (n_probes), 순열 p = 0.000
+  => 유의 (p<0.05). 다변량 결합과 홀드아웃으로 진행
+※ think_len 과 n_probes 는 귀무 모델이다. 다른 특징이 이 둘을 못 이기면 신호는 길이에 대해 잉여다
+※ 절단 건은 정의상 think_len=max_new, n_probes=최대이므로 이 둘이
+  '실패' 를 거의 완벽히 맞힌다. 이 표에서 둘이 1위면 동어반복이다

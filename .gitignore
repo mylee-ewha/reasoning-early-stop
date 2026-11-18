@@ -1,0 +1,16 @@
+# 데이터 — 절대 커밋 금지
+/data
+*.f16
+*.f32
+*.proj.npy
+*.reduced.npz
+
+# legacy 전체
+/legacy
+
+# 파이썬·도구
+__pycache__/
+*.pyc
+.cache/
+.ipynb_checkpoints/
+.vscode/
