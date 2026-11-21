@@ -316,7 +316,7 @@ class Readout:
     2폴드 AUC 로 고른다 — 행 단위로 고르면 같은 예제가 양쪽에 들어가서
     용량 큰 모델이 유리해진다. ridge 는 예전과 같게 RidgeClassifierCV 그대로.
     """
-    GRID = {"logreg": (1e-3, 1e-2, 1e-1),
+    GRID = {"logreg": (1e-5, 1e-4, 1e-3, 1e-2, 1e-1),
             "mlp": (1e-2, 1e0, 1e2),
             "rbf": (0.25, 1.0, 4.0)}
 
