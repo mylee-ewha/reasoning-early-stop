@@ -200,10 +200,21 @@ def commit_of(out, use_grade2=True):
 # ──────────────────────── [2026-11-17] E3: 인과 특징 ────────────────────────
 def parse_feat(s):
     kinds = [k.strip() for k in s.split(",") if k.strip()]
-    bad = [k for k in kinds if k not in ("snap", "delta", "local", "global")]
+    bad = [k for k in kinds if k not in FEAT_KINDS]
     if bad or not kinds:
-        raise SystemExit(f"--feat 에 모르는 종류 {bad}. snap/delta/local/global")
+        raise SystemExit(f"--feat 에 모르는 종류 {bad}. {'/'.join(FEAT_KINDS)}")
     return kinds
+
+
+# [2026-11-21] fut / cdiff 는 **미래 행**을 쓴다 — 배포(온라인)에서는 계산할 수 없다.
+#   목적은 상한 측정: 앞뒤를 다 봐도 스냅샷보다 안 늘면 과거만 보는 판독기는
+#   더 볼 것이 없다.
+#   fut   = 다음 win 행 평균 (현재 행 제외)
+#   cdiff = 다음 win 행 평균 − 이전 win 행 평균 (둘 다 현재 행 제외).
+#           변화점 탐지의 기본 통계량. 꾸준한 경사에서는 거의 상수(경사×win)라
+#           '창 안 위치'를 알려 주는 시계 성분이 local/global 보다 작다.
+FEAT_KINDS = ("snap", "delta", "local", "global", "fut", "cdiff")
+FUTURE_KINDS = ("fut", "cdiff")
 
 
 def feat_rows(A, li, rs, positions, keep, kinds, lag, win):
@@ -214,6 +225,8 @@ def feat_rows(A, li, rs, positions, keep, kinds, lag, win):
     positions 중 keep=False 인 행은 build 가 어차피 버리므로 값은 아무거나.
     """
     hi_pos = int(max(positions)) + 1
+    if any(k in FUTURE_KINDS for k in kinds):          # [2026-11-21] 미래 행까지 읽는다
+        hi_pos = int(min(len(rs), hi_pos + 2 * win + 1))
     H = A[rs[:hi_pos], li, :].astype(np.float32)
     mk = (keep[rs[:hi_pos]] if keep is not None
           else np.ones(hi_pos, bool))
@@ -221,7 +234,7 @@ def feat_rows(A, li, rs, positions, keep, kinds, lag, win):
     if len(kp) == 0:
         kp = np.arange(hi_pos)
     Hk = H[kp]
-    need_cs = ("local" in kinds) or ("global" in kinds)
+    need_cs = any(k in kinds for k in ("local", "global", "fut", "cdiff"))
     cs = np.cumsum(Hk, 0, dtype=np.float64) if need_cs else None
 
     out = []
@@ -239,8 +252,25 @@ def feat_rows(A, li, rs, positions, keep, kinds, lag, win):
                 lo = i - win
                 s = cs[i] - (cs[lo] if lo >= 0 else 0.0)
                 parts.append((s / min(win, i + 1)).astype(np.float32))
-            else:  # global
+            elif k == "global":
                 parts.append((cs[i] / (i + 1)).astype(np.float32))
+            else:  # [2026-11-21] fut / cdiff — 유효 행 기준 kp[i] 다음 win 개
+                n_k = len(kp)
+                # p 가 유효 행이면 kp[i] == p. 미래는 i+1 .. i+win (있는 만큼)
+                f_hi = min(i + win, n_k - 1)
+                if f_hi > i:
+                    fut = (cs[f_hi] - cs[i]) / (f_hi - i)
+                else:                                  # 체인 끝 — 미래가 없으면 현재 행
+                    fut = H[p].astype(np.float64)
+                if k == "fut":
+                    parts.append(fut.astype(np.float32))
+                else:
+                    p_lo = i - win - 1                 # 과거는 i-win .. i-1
+                    if i >= 1:
+                        past = (cs[i - 1] - (cs[p_lo] if p_lo >= 0 else 0.0)) / (i - 1 - max(p_lo, -1))
+                    else:                              # 체인 첫 행 — 과거가 없으면 현재 행
+                        past = H[p].astype(np.float64)
+                    parts.append((fut - past).astype(np.float32))
         out.append(np.concatenate(parts))
     return np.stack(out)
 
@@ -316,7 +346,7 @@ class Readout:
     2폴드 AUC 로 고른다 — 행 단위로 고르면 같은 예제가 양쪽에 들어가서
     용량 큰 모델이 유리해진다. ridge 는 예전과 같게 RidgeClassifierCV 그대로.
     """
-    GRID = {"logreg": (1e-5, 1e-4, 1e-3, 1e-2, 1e-1),
+    GRID = {"logreg": (1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1),
             "mlp": (1e-2, 1e0, 1e2),
             "rbf": (0.25, 1.0, 4.0)}
 
@@ -621,8 +651,11 @@ def main():
                     help="E1. 여러 개를 주면 같은 귀무 추첨 위에서 차례로 돈다")
     ap.add_argument("--pca", type=int, default=0,
                     help="E1. 모든 판독기에 같은 PCA 차원. mlp/rbf 는 0 이면 256 으로")
-    ap.add_argument("--feat", default="snap",
-                    help="E3. snap,delta,local,global 을 쉼표로 (기본 snap = 예전과 같음)")
+    ap.add_argument("--feat", nargs="+", default=["snap"],
+                    help="E3. snap,delta,local,global,fut,cdiff 를 쉼표로 (기본 snap = 예전과 같음). "
+                         "[2026-11-21] 여러 개를 주면(예: --feat snap snap,delta) **같은 귀무 추첨** "
+                         "위에서 차례로 돌고, 첫 번째 대비 Δ 차이를 추첨마다 짝지어 검정한다. "
+                         "fut/cdiff 는 미래 행을 쓰므로 배포 불가 — 상한 측정용")
     ap.add_argument("--lag", type=int, default=4, help="E3 delta 의 간격(덤프 행)")
     ap.add_argument("--win", type=int, default=8, help="E3 local 창(덤프 행)")
     ap.add_argument("--traj", action="store_true",
@@ -634,8 +667,13 @@ def main():
                          "cos(dom, ridge) 와 층간 cos 를 찍는다")
     a = ap.parse_args()
 
-    kinds = parse_feat(a.feat)
-    feat = (kinds, a.lag, a.win)
+    # [2026-11-21] 특징 집합 여러 개 — 첫 번째가 기준(보통 snap)
+    feat_list = [(parse_feat(f), a.lag, a.win) for f in a.feat]
+    fname = ["+".join(f[0]) for f in feat_list]
+    kinds, feat = feat_list[0][0], feat_list[0]          # 참고·삼분위·궤적·w 는 기준 특징으로
+    multi_f = len(feat_list) > 1
+    if any(k in FUTURE_KINDS for f in feat_list for k in f[0]):
+        print("  ** fut/cdiff 는 미래 행을 쓴다 — 배포 불가, 상한 측정용 **")
     pca_of = {m: (a.pca if a.pca else (256 if m in ("mlp", "rbf") else 0))
               for m in a.model}
 
@@ -690,8 +728,9 @@ def main():
         print(f"극단값 제외: 노름 > {a.drop_extreme:g}× 중앙값 인 행을 뺀다")
     # [2026-11-17]
     print(f"판독기: {', '.join(f'{m}(pca={pca_of[m]})' for m in a.model)}   "
-          f"특징: {'+'.join(kinds)}"
-          + (f" (lag={a.lag}행, win={a.win}행)" if kinds != ['snap'] else ""))
+          f"특징: {' | '.join(fname)}"
+          + (f" (lag={a.lag}행, win={a.win}행)" if any(f[0] != ['snap'] for f in feat_list) else "")
+          + ("   [여러 특징: 첫 번째 대비 짝지은 Δ 차이를 아래에 따로 찍는다]" if multi_f else ""))
     print()
 
     # 경험적 p 의 하한은 1/(nnull+1) 이다. 이게 유의수준보다 크면 그 검정은
@@ -712,7 +751,13 @@ def main():
     print("     uniform = 체인 안 균등 — 실제 정착이 앞쪽에 쏠려 있으면 "
           "위치 차이만으로 거짓양성이 난다\n")
     multi = len(a.model) > 1
+    cfgs = [(m, fi) for fi in range(len(feat_list)) for m in a.model]
+
+    def cfg_lab(m, fi):
+        return ((f"{m:<7}" if multi else "")
+                + (f"{fname[fi]:<22}" if multi_f else ""))
     print(f"{'레이어':>6} " + (f"{'모델':<7}" if multi else "")
+          + (f"{'특징':<22}" if multi_f else "")
           + f"{'귀무':<8} {'진짜':>7} {'가짜평균':>9} {'가짜sd':>8} "
           f"{'차':>8} {'z':>7} {'p':>8}")
     W_raw = {}
@@ -726,14 +771,17 @@ def main():
                   f"({(~keep).mean()*100:.3f}%)  최대 {nrm.max():.0f}")
 
         X, y, g, rw, ndrop, nskip = build(A, li, spans, a.K, keep, a.center_ex, feat)
+        Xf = {0: X}
+        for fi in range(1, len(feat_list)):
+            Xf[fi] = build(A, li, spans, a.K, keep, a.center_ex, feat_list[fi])[0]
         if a.drop_extreme > 0 or nskip:
             print(f"  [L{L}] 학습 표본에서 제외 {ndrop}행, "
                   f"예제 제외 {nskip}건 → 최종 {len(y):,}행 / "
                   f"{len(np.unique(g))}예제")
-        rlog = {m: [] for m in a.model}
-        real = {m: fit_auc(X, y, g, a.folds, seed=1, kind=m, pca=pca_of[m],
-                           log=rlog[m])
-                for m in a.model}
+        rlog = {c: [] for c in cfgs}
+        real = {(m, fi): fit_auc(Xf[fi], y, g, a.folds, seed=1, kind=m, pca=pca_of[m],
+                                 log=rlog[(m, fi)])
+                for (m, fi) in cfgs}
 
         # 귀무의 컷 위치. uniform 은 체인 안 균등이라 **위치 분포가 다르다** —
         # 실제 정착은 체인 앞쪽(상대위치 평균 0.29)에 몰려 있고 균등은 0.52 다.
@@ -746,8 +794,8 @@ def main():
         modes = ("matched", "uniform") if a.null == "both" else (a.null,)
         first_fake = None
         for mi, mode in enumerate(modes):
-            null = {m: [] for m in a.model}
-            nlog = {m: [] for m in a.model}
+            null = {c: [] for c in cfgs}
+            nlog = {c: [] for c in cfgs}
             for b in range(a.nnull):
                 ns = []
                 if mode == "matched":
@@ -762,29 +810,69 @@ def main():
                         ns.append((rs, int(rg.integers(a.K, m_ - a.K))))
                 if mode == "matched" and first_fake is None:
                     first_fake = ns
-                Xn, yn, gn, _, _, _ = build(A, li, ns, a.K, keep, a.center_ex, feat)
-                for m in a.model:
-                    null[m].append(fit_auc(Xn, yn, gn, a.folds, seed=100 + b,
-                                           kind=m, pca=pca_of[m], log=nlog[m]))
-                if multi and (b + 1) % 10 == 0:
+                for fi in range(len(feat_list)):
+                    Xn, yn, gn, _, _, _ = build(A, li, ns, a.K, keep, a.center_ex,
+                                                feat_list[fi])
+                    for m in a.model:
+                        null[(m, fi)].append(fit_auc(Xn, yn, gn, a.folds, seed=100 + b,
+                                                     kind=m, pca=pca_of[m],
+                                                     log=nlog[(m, fi)]))
+                if (multi or multi_f) and (b + 1) % 10 == 0:
                     print(f"    [{mode}] 귀무 {b+1}/{a.nnull}", end="\r", flush=True)
-            for k, m in enumerate(a.model):
-                nl = np.array([v for v in null[m] if np.isfinite(v)])
-                if len(nl) < len(null[m]):
-                    print(f"  ** {m}: 귀무 {len(null[m]) - len(nl)}회 실패 → {len(nl)}회로 계산")
-                d = real[m] - nl.mean()
+            if multi or multi_f:
+                print(" " * 40, end="\r")                # 진행 표시 줄 지우기
+            for k, (m, fi) in enumerate(cfgs):
+                c = (m, fi)
+                nl = np.array([v for v in null[c] if np.isfinite(v)])
+                if len(nl) < len(null[c]):
+                    print(f"  ** {m}/{fname[fi]}: 귀무 {len(null[c]) - len(nl)}회 실패 → {len(nl)}회로 계산")
+                d = real[c] - nl.mean()
                 z = d / (nl.std(ddof=1) + 1e-9)
-                p = (np.sum(nl >= real[m]) + 1) / (len(nl) + 1)
+                p = (np.sum(nl >= real[c]) + 1) / (len(nl) + 1)
                 tag = f"{L}" if (mi == 0 and k == 0) else ""
-                print(f"{tag:>6} " + (f"{m:<7}" if multi else "")
-                      + f"{mode:<8} {real[m]:>7.3f} {nl.mean():>9.3f} "
+                # [2026-11-21] 천장: 가짜 AUC 가 이미 높으면 Δ 가 올라갈 자리가 없다.
+                #   위치(창 안 앞/뒤)를 특징이 시계처럼 알려 주는 경우 — 이 줄의 Δ 는 해석 불가
+                ceil = (f"  [천장: 가짜평균 {nl.mean():.3f}, 여유 {1 - nl.mean():.3f} → 판정 불가]"
+                        if nl.mean() > 0.9 else "")
+                print(f"{tag:>6} " + cfg_lab(m, fi)
+                      + f"{mode:<8} {real[c]:>7.3f} {nl.mean():>9.3f} "
                       f"{nl.std(ddof=1):>8.3f} {d:>+8.3f} {z:>+7.2f} {p:>8.3f}"
-                      + ("  **" if p < 0.05 and d > 0 else ""))
-                hs = hp_summary(m, rlog[m], nlog[m])
+                      + ("  **" if p < 0.05 and d > 0 and not ceil else "") + ceil)
+                hs = hp_summary(m, rlog[c], nlog[c])
                 if hs:
                     print(f"{'':>6}   ↳ {hs}")
 
+            # [2026-11-21] 특징 집합 짝지은 비교. 같은 귀무 추첨 b 위에서
+            #   차이_b = AUC_F(가짜 b) − AUC_기준(가짜 b) 를 만들고,
+            #   ΔΔ = (진짜_F − 진짜_기준) − mean(차이_b).
+            #   '특징 F 가 가짜 라벨에서도 올려 주는 몫(=위치)'을 빼고 남는 이득이다.
+            #   따로 돌린 두 Δ 를 빼면 차이의 흔들림이 √2 배로 커지는데,
+            #   같은 추첨에서 짝지으면 공통 흔들림이 상쇄된다.
+            if multi_f:
+                print(f"{'':>6}   [짝지은 비교 · {mode}] 기준 = {fname[0]}"
+                      f"   ΔΔ = (진짜 차이) − (가짜 차이 평균), sd = 가짜 차이의 sd")
+                for m in a.model:
+                    base = np.array(null[(m, 0)], float)
+                    for fi in range(1, len(feat_list)):
+                        cur = np.array(null[(m, fi)], float)
+                        ok = np.isfinite(base) & np.isfinite(cur)
+                        dn = cur[ok] - base[ok]
+                        dr = real[(m, fi)] - real[(m, 0)]
+                        dd = dr - dn.mean()
+                        sd = dn.std(ddof=1) + 1e-9
+                        pp = (np.sum(dn >= dr) + 1) / (len(dn) + 1)
+                        warn = ("  [천장 — 판정 불가]"
+                                if np.nanmean(cur) > 0.9 else "")
+                        print(f"{'':>6}     " + (f"{m:<7}" if multi else "")
+                              + f"{fname[fi]:<22} 진짜 차이 {dr:>+7.3f}  "
+                              f"가짜 차이 {dn.mean():>+7.3f}±{dn.std(ddof=1):.3f}  "
+                              f"ΔΔ {dd:>+7.3f}  z {dd / sd:>+6.2f}  p {pp:.3f}"
+                              + ("  **" if pp < 0.05 and dd > 0 and not warn else "")
+                              + warn)
+
         m0 = a.model[0]
+        if multi_f:
+            print(f"{'':>6}   (아래 참고·삼분위·궤적은 기준 특징 {fname[0]} 로)")
         # 참고: 위치 자체는 얼마나 읽히나 (체인 전/후반 분류)
         if True:
             # [2026-11-13 수정] build 가 실제로 쓴 행(rw)으로 라벨을 만든다.
