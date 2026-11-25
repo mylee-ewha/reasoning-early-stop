@@ -308,6 +308,106 @@ def nocommit_diag(EX, SC, fold_of, nfolds, targets):
     print()
 
 
+
+# ── [2026-11-25] KL 검증기 팔 ─────────────────────────────────────────────
+#   detector 가 발화한 probe 지점에서, 미리 재 둔 V-noise KL 이 '수치상 0' 이하면
+#   닫고, 아니면 통과(계속 생성)해서 다음 발화를 기다린다. gold 검증기
+#   (verifier_stops)와 구조가 같고 판정 기준만 gold 대신 KL 이다 — 배포 가능.
+#   --kl-cell clean 이면 노이즈 없는 1 − p_top 으로 같은 판정을 한다(기준선).
+def load_kl(path, cell):
+    KL = {}
+    for l in open(path):
+        if not l.strip():
+            continue
+        r = json.loads(l)
+        if cell == "clean":
+            KL[r["ex_id"]] = {p["t"]: 1.0 - p["p_top"] for p in r["points"]}
+        else:
+            KL[r["ex_id"]] = {p["t"]: max(p["cells"][cell]["kl"], 0.0) for p in r["points"]}
+    return KL
+
+
+def kl_verifier_stops(EX, sc, tau, KL, thr, cost=15.8):
+    """탈락 비용은 gold 검증기와 같은 상수(probe 1회)로 둬서 두 팔을 같은 조건에
+    둔다. KL 이 없는 지점은 판정 불가 → 통과로 처리하고 개수를 센다."""
+    stops, extra, miss = [], [], 0
+    for e, s in zip(EX, sc):
+        kmap = KL.get(e["ex_id"], {})
+        seen, chosen, nrej = set(), None, 0
+        for h in np.where(s > tau)[0]:
+            t = snap_up(e["probes"], int(e["ts"][h]))
+            if t is None or t in seen:
+                continue
+            seen.add(t)
+            k = kmap.get(t)
+            if k is None:
+                miss += 1
+            elif k <= thr:
+                chosen = t
+                break
+            nrej += 1
+        stops.append(chosen)
+        extra.append(nrej * cost)
+    kl_verifier_stops.miss = miss
+    return stops, extra
+
+
+def kl_diag(EX, SC, fold_of, nfolds, targets, KL, thr, label):
+    """전 문제(사분위 없이) 기준: 규칙 단독 vs 규칙+KL 검증기 vs 규칙+gold 검증기.
+    τ 는 팔마다 학습 폴드에서 따로 고른다(목표 절감률을 각자 맞추도록)."""
+    N = len(EX)
+    grp = lambda e: "A" if e["commit"] is not None else ("C" if e["fin"] else "B")
+    print("=" * 104)
+    print(f"[KL 검증기] {label}  thr={thr:g}  — 전 문제, 학습 폴드에서 팔마다 τ 따로")
+    print("=" * 104)
+    for tgt in targets:
+        stR, stK, stV = [None] * N, [None] * N, [None] * N
+        exK, exV = np.zeros(N), np.zeros(N)
+        miss = 0
+        for fi in range(nfolds):
+            tr = [i for i in range(N) if fold_of[i] != fi]
+            te = [i for i in range(N) if fold_of[i] == fi]
+            if not tr or not te:
+                continue
+            Etr, Str = [EX[i] for i in tr], [SC[fi][i] for i in tr]
+            Ete, Ste = [EX[i] for i in te], [SC[fi][i] for i in te]
+            g = list(np.quantile(np.concatenate(Str), np.linspace(0.01, 0.999, 120)))
+            tau = pick_best(Etr, tgt, g, lambda E, c, S=Str: rule_stops(E, S, c))
+            tauk = pick_best(Etr, tgt, g, lambda E, c, S=Str: kl_verifier_stops(E, S, c, KL, thr))
+            tauv = pick_best(Etr, tgt, g, lambda E, c, S=Str: verifier_stops(E, S, c))
+            r = rule_stops(Ete, Ste, tau)
+            k, ek = kl_verifier_stops(Ete, Ste, tauk, KL, thr); miss += kl_verifier_stops.miss
+            v, ev = verifier_stops(Ete, Ste, tauv)
+            for j, i in enumerate(te):
+                stR[i], stK[i], stV[i] = r[j], k[j], v[j]
+                exK[i], exV[i] = ek[j], ev[j]
+        _, ob = evaluate(EX, [None] * N)
+        sr, orr = evaluate(EX, stR)
+        sk, ok = evaluate(EX, stK, exK)
+        sv, ov = evaluate(EX, stV, exV)
+        n01, n10 = int(np.sum(ok & ~orr)), int(np.sum(~ok & orr))
+        print(f"\n목표 {tgt*100:.0f}%   (KL 이 없어 통과 처리한 발화 {miss}건)")
+        print(f"  전체 n={N}  베이스 {ob.mean()*100:5.1f}%  │ 규칙 {orr.mean()*100:5.1f}% / 절감 {sr*100:5.1f}%"
+              f"  │ +KL {ok.mean()*100:5.1f}% / {sk*100:5.1f}%  │ +gold {ov.mean()*100:5.1f}% / {sv*100:5.1f}%")
+        print(f"  KL vs 규칙 (같은 문제 짝): KL만 맞힘 {n01} / 규칙만 맞힘 {n10}  부호검정 p={sign_p(n01, n10):.3g}")
+        print(f"  {'집단':<4}{'n':>5}  {'베이스':>7}  {'규칙':>15}  {'+KL':>15}  {'+gold':>15}   망침(규칙→KL)  고침(규칙→KL)")
+        for gname in ("A", "B", "C"):
+            ix = np.array([i for i in range(N) if grp(EX[i]) == gname])
+            if len(ix) == 0:
+                continue
+            sub = [EX[i] for i in ix]
+            s1, o1 = evaluate(sub, [stR[i] for i in ix])
+            s2, o2 = evaluate(sub, [stK[i] for i in ix], exK[ix])
+            s3, o3 = evaluate(sub, [stV[i] for i in ix], exV[ix])
+            b = ob[ix]
+            print(f"  {gname:<4}{len(ix):>5}  {b.mean()*100:6.1f}%  {o1.mean()*100:6.1f}%/{s1*100:5.1f}%"
+                  f"  {o2.mean()*100:6.1f}%/{s2*100:5.1f}%  {o3.mean()*100:6.1f}%/{s3*100:5.1f}%"
+                  f"   {int(np.sum(~o1 & b)):>3} → {int(np.sum(~o2 & b)):<3}       {int(np.sum(o1 & ~b)):>3} → {int(np.sum(o2 & ~b)):<3}")
+    print("\n읽는 법: 각 칸은 정확도/토큰 절감. 망침 = 베이스는 맞혔는데 그 팔이 틀린 문제 수.")
+    print("  C 의 망침이 줄고 A·B 의 망침이 늘지 않으면, 같은 절감에서 KL 검증기가 손실을 막은 것.")
+    print("  절감은 탈락 1건당 15.8토큰을 비용으로 넣은 값(gold 팔과 같은 조건).")
+    print()
+
 def spearman(x, y):
     m = np.isfinite(x) & np.isfinite(y)
     if m.sum() < 5:
@@ -342,6 +442,12 @@ def main():
     ap.add_argument("--pca", type=int, default=0,
                     help="detector 를 StandardScaler → PCA(N) → StandardScaler → "
                          "RidgeClassifierCV 로. 0=끔(v5 와 동일)")
+    ap.add_argument("--kl", default=None,
+                    help="vnoise_curve.jsonl — 주면 KL 검증기 팔 진단을 추가로 돈다")
+    ap.add_argument("--kl-cell", default="18|2",
+                    help="'18|2', 'all|0.5', 또는 'clean'(노이즈 없는 1 − p_top 기준선)")
+    ap.add_argument("--kl-thr", type=float, default=None,
+                    help="'수치상 0' 기준. 기본: KL 칸은 음수 KL |값|의 99%% 분위, clean 은 0")
     a = ap.parse_args()
     TARGETS = [float(x) for x in a.targets.split(",")]
     a_early = a.early_t
@@ -513,6 +619,21 @@ def main():
     if not a.no_diag:
         nocommit_diag(EX, SC, fold_of, a.folds,
                       [float(x) for x in a.targets.split(",")])
+
+    if a.kl:
+        KLM = load_kl(a.kl, a.kl_cell)
+        thr = a.kl_thr
+        if thr is None:
+            if a.kl_cell == "clean":
+                thr = 0.0
+            else:
+                neg = [-p["cells"][a.kl_cell]["kl"] for l in open(a.kl) if l.strip()
+                       for p in json.loads(l)["points"] if p["cells"][a.kl_cell]["kl"] < 0]
+                thr = float(np.quantile(neg, 0.99)) if neg else 0.0
+        have = sum(1 for e in EX if e["ex_id"] in KLM)
+        print(f"[KL] {a.kl} 칸 {a.kl_cell}: 예제 {have}/{len(EX)} 에 KL 있음, thr={thr:.3g}")
+        kl_diag(EX, SC, fold_of, a.folds, [float(x) for x in a.targets.split(",")],
+                KLM, thr, a.kl_cell)
 
     _, base_ok = evaluate(EX, [None] * N)
     so, oo = evaluate(EX, [e["commit"] for e in EX])
