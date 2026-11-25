@@ -81,6 +81,11 @@ def main():
     ds = load_math500(a.data_file, None, a.data_n)
     by_uid = {r.get("unique_id"): r for r in ds}
     rows = [json.loads(l) for l in open(a.out) if l.strip()]
+    # [2026-11-25] feat.commit_step 은 수집 시 내장 eq_math(antlr 없음)로 계산돼
+    # 표기 차이를 '답 바뀜'으로 센다. 다른 스크립트와 같은 grade2 commit_of 로 다시 낸다
+    from quartile_paired import commit_of, GRADER
+    assert GRADER.startswith("grade2"), f"grade2 필요 — 현재 {GRADER}"
+    CM = commit_of(rows)
     rows = [r for r in rows if r.get("probes") and r.get("text") and r.get("uid") in by_uid]
     order = np.random.default_rng(a.seed).permutation(len(rows))
     rows = [rows[i] for i in order]
@@ -234,7 +239,8 @@ def main():
         torch.cuda.empty_cache()
         return dict(ex_id=r["ex_id"], uid=r["uid"], think_len=r["think_len"],
                     fin=bool(r.get("fin", True)),
-                    commit_feat=r.get("feat", {}).get("commit_step"),
+                    commit_feat=CM.get(r["ex_id"]),
+                    commit_builtin=r.get("feat", {}).get("commit_step"),   # 추적용
                     n_prompt=npr, points=pts)
 
     os.makedirs(os.path.dirname(a.save) or ".", exist_ok=True)

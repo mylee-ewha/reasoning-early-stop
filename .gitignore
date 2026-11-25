@@ -13,4 +13,4 @@ __pycache__/
 *.pyc
 .cache/
 .ipynb_checkpoints/
-.vscode/results/attn/attn_pt_heads.npz
+results/attn/attn_pt_heads.npz
