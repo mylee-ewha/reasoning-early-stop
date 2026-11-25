@@ -39,6 +39,8 @@ import copy
 
 import numpy as np
 
+from quartile_paired import commit_of, GRADER
+
 
 def resolve_model_dir(m):
     import os
@@ -112,6 +114,10 @@ def main():
     ds = load_math500(a.data_file, None, a.data_n)
     by_uid = {r.get("unique_id"): r for r in ds}
     rows = [json.loads(l) for l in open(a.out)]
+    assert GRADER.startswith("grade2"), f"grade2 필요 — 현재 {GRADER}"
+    CM = commit_of(rows)
+    for r in rows:
+        r.setdefault("feat", {})["commit_step"] = CM.get(r["ex_id"])   # 아래 세 곳이 그대로 grade2 값을 읽게
     rows = [r for r in rows if r.get("probes")
             and r.get("feat", {}).get("commit_step")
             and r.get("text") and r.get("uid") in by_uid]
